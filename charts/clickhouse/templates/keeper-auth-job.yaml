@@ -1,0 +1,102 @@
+{{- if and .Values.keeper.enabled .Values.keeper.auth.enabled }}
+{{- template "clickhouse.validateKeeperAuth" . -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "clickhouse.fullname" . }}-keeper-auth-setup
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper-auth-setup
+spec:
+  backoffLimit: {{ .Values.keeper.auth.setup.backoffLimit }}
+  {{- if .Values.keeper.auth.setup.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ .Values.keeper.auth.setup.ttlSecondsAfterFinished }}
+  {{- end }}
+  {{- if .Values.keeper.auth.setup.activeDeadlineSeconds }}
+  activeDeadlineSeconds: {{ .Values.keeper.auth.setup.activeDeadlineSeconds }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "clickhouse.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: keeper-auth-setup
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.keeper.auth.setup.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.keeper.auth.setup.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.keeper.auth.setup.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: keeper-auth-setup
+          image: "{{ .Values.keeper.auth.setup.image.repository }}:{{ .Values.keeper.auth.setup.image.tag }}"
+          imagePullPolicy: {{ .Values.keeper.auth.setup.image.pullPolicy }}
+          command:
+            - "sh"
+            - "-c"
+            - |
+              # Wait for Keeper to be ready
+              until echo "ruok" | nc {{ include "clickhouse.fullname" . }}-keeper-0.{{ include "clickhouse.fullname" . }}-keeper-headless {{ .Values.ports.keeper.client }} | grep "imok"; do
+                echo "Waiting for Keeper to be ready..."
+                sleep 5
+              done
+              
+              echo "Keeper is ready, configuring auth..."
+
+              # Check if auth is already configured - ZooKeeper container has zkCli.sh
+              echo "Checking current ACLs..."
+              GETACL_RESULT=$(zkCli.sh -server {{ include "clickhouse.fullname" . }}-keeper-0.{{ include "clickhouse.fullname" . }}-keeper-headless:{{ .Values.ports.keeper.client }} getAcl / 2>&1 || echo "No ACLs")
+              
+              if echo "$GETACL_RESULT" | grep -q "Insufficient permission"; then
+                echo "Authentication is already configured. Changes to authentication must be done manually."
+                exit 0
+              fi
+              
+              # Extract username and password from auth string
+              USERNAME=$(echo $CLICKHOUSE_KEEPER_AUTH | cut -d':' -f1)
+              PASSWORD=$(echo $CLICKHOUSE_KEEPER_AUTH | cut -d':' -f2)
+
+              # Generate password hash
+              PASSWORD_HASH=$(echo -n "${CLICKHOUSE_KEEPER_AUTH}" | openssl dgst -binary -sha1 | openssl base64)
+              
+              # Function to mask sensitive information in output
+              mask_sensitive_info() {
+                local output="$1"
+                local password="$2"
+                local password_hash="$3"
+                
+                # Replace password and hash with asterisks
+                output=$(echo "$output" | sed "s|$password|********|g")
+                output=$(echo "$output" | sed "s|$password_hash|********|g")
+                echo "$output"
+              }
+              
+              # Set up auth using username and hashed password
+              echo "Setting up authentication..."
+              AUTH_OUTPUT=$(zkCli.sh -server {{ include "clickhouse.fullname" . }}-keeper-0.{{ include "clickhouse.fullname" . }}-keeper-headless:{{ .Values.ports.keeper.client }} << EOF
+              addauth digest $CLICKHOUSE_KEEPER_AUTH
+              setAcl / digest:${USERNAME}:${PASSWORD_HASH}:crwda
+              EOF
+              )
+              
+              # Mask sensitive information in the output
+              MASKED_AUTH_OUTPUT=$(mask_sensitive_info "$AUTH_OUTPUT" "$PASSWORD" "$PASSWORD_HASH")
+              echo "$MASKED_AUTH_OUTPUT"
+              
+              echo "Auth configuration complete."
+          env:
+            - name: CLICKHOUSE_KEEPER_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.keeperAuthSecretName" . }}
+                  key: {{ .Values.keeper.auth.secretKey }}
+          resources:
+            {{- toYaml .Values.keeper.auth.setup.resources | nindent 12 }}
+{{- end }}

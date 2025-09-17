@@ -1,0 +1,20 @@
+{{- if and .Values.keeper.enabled .Values.keeper.podDisruptionBudget.enabled (gt (int .Values.keeper.replicas) 1) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "clickhouse.fullname" . }}-keeper
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper
+spec:
+  selector:
+    matchLabels:
+      {{- include "clickhouse.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: keeper
+  {{- if .Values.keeper.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.keeper.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.keeper.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.keeper.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+{{- end }}

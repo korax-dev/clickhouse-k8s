@@ -1,0 +1,25 @@
+{{- if .Values.keeper.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "clickhouse.fullname" . }}-keeper-headless
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "clickhouse.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper
+  ports:
+    - name: tcp-client
+      port: {{ .Values.ports.keeper.client }}
+      targetPort: tcp-client
+    - name: tcp-raft
+      port: {{ .Values.ports.keeper.raft }}
+      targetPort: tcp-raft
+    - name: http-control
+      port: {{ .Values.ports.keeper.httpControl }}
+      targetPort: http-control
+{{- end }}

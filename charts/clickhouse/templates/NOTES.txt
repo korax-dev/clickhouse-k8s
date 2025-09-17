@@ -1,0 +1,90 @@
+CHART NAME: {{ .Chart.Name }}
+CHART VERSION: {{ .Chart.Version }}
+APP VERSION: {{ .Chart.AppVersion }}
+
+-------------------------------------------------------------------------------
+CLICKHOUSE CLUSTER INFORMATION
+-------------------------------------------------------------------------------
+
+ClickHouse is accessible via:
+
+- HTTP interface:   http://{{ include "clickhouse.fullname" . }}:{{ .Values.ports.clickhouse.http }}
+- Native interface: {{ include "clickhouse.fullname" . }}:{{ .Values.ports.clickhouse.tcp }}
+
+From inside the cluster:
+  kubectl exec -it <pod-name> -- clickhouse-client --host={{ include "clickhouse.fullname" . }}
+
+Port forwarding to local machine:
+  kubectl port-forward svc/{{ include "clickhouse.fullname" . }} {{ .Values.ports.clickhouse.http }}:{{ .Values.ports.clickhouse.http }}
+  curl http://localhost:{{ .Values.ports.clickhouse.http }}/ping
+
+Your ClickHouse cluster consists of {{ .Values.clickhouse.shards }} shard(s) with {{ .Values.clickhouse.replicasPerShard }} replica(s) each.
+All nodes are accessible through the service: {{ include "clickhouse.fullname" . }}
+
+Individual shards can be accessed directly:
+{{- range $shard := until (int .Values.clickhouse.shards) }}
+  - Shard {{ $shard }}:
+  {{- range $replica := until (int $.Values.clickhouse.replicasPerShard) }}
+    - {{ include "clickhouse.fullname" $ }}-shard{{ $shard }}-{{ $replica }}.{{ include "clickhouse.fullname" $ }}-headless
+  {{- end }}
+{{- end }}
+
+{{- if .Values.keeper.enabled }}
+
+-------------------------------------------------------------------------------
+CLICKHOUSE KEEPER
+-------------------------------------------------------------------------------
+
+ClickHouse Keeper is deployed with {{ .Values.keeper.replicas }} node(s) and can be accessed at:
+{{ include "clickhouse.fullname" . }}-keeper:{{ .Values.ports.keeper.client }}
+
+Individual Keeper nodes:
+{{- range $i := until (int .Values.keeper.replicas) }}
+  - {{ include "clickhouse.fullname" $ }}-keeper-{{ $i }}.{{ include "clickhouse.fullname" $ }}-keeper-headless
+{{- end }}
+{{- end }}
+
+{{- if or .Values.clickhouse.auth.enabled .Values.clickhouse.interserverCredentials.enabled (and .Values.keeper.enabled .Values.keeper.auth.enabled) }}
+
+-------------------------------------------------------------------------------
+AUTHENTICATION INFORMATION
+-------------------------------------------------------------------------------
+
+To retrieve the authentication credentials, use the following commands:
+{{- if .Values.clickhouse.auth.enabled }}
+
+- ClickHouse User Credentials:
+   kubectl get secret --namespace {{ .Release.Namespace }} {{ include "clickhouse.authSecretName" . }} -o jsonpath="{.data.username}" | base64 --decode
+   kubectl get secret --namespace {{ .Release.Namespace }} {{ include "clickhouse.authSecretName" . }} -o jsonpath="{.data.password}" | base64 --decode
+{{- end }}
+
+{{- if .Values.clickhouse.interserverCredentials.enabled }}
+
+- ClickHouse Interserver Credentials:
+   kubectl get secret --namespace {{ .Release.Namespace }} {{ include "clickhouse.interserverSecretName" . }} -o jsonpath="{.data.username}" | base64 --decode
+   kubectl get secret --namespace {{ .Release.Namespace }} {{ include "clickhouse.interserverSecretName" . }} -o jsonpath="{.data.password}" | base64 --decode
+{{- end }}
+
+{{- if and .Values.keeper.enabled .Values.keeper.auth.enabled }}
+
+- ClickHouse Keeper Credentials:
+   kubectl get secret --namespace {{ .Release.Namespace }} {{ include "clickhouse.keeperAuthSecretName" . }} -o jsonpath="{.data.{{ .Values.keeper.auth.secretKey }}}" | base64 --decode
+
+   NOTE: Changing Keeper authentication credentials after initial setup cannot be done automatically.
+{{- end }}
+{{- end }}
+
+-------------------------------------------------------------------------------
+USEFUL COMMANDS
+-------------------------------------------------------------------------------
+
+Check all resources:
+  kubectl get all -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }}
+
+View ClickHouse logs:
+  kubectl logs -l app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/name={{ include "clickhouse.name" . }} -n {{ .Release.Namespace }}
+
+Get configuration details:
+  kubectl describe configmap {{ include "clickhouse.fullname" . }}-config -n {{ .Release.Namespace }}
+
+For more information on using ClickHouse, visit: https://clickhouse.com/docs

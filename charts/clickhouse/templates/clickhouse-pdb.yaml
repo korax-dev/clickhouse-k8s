@@ -1,0 +1,25 @@
+{{- if and .Values.clickhouse.podDisruptionBudget.enabled (gt (int .Values.clickhouse.replicasPerShard) 1) }}
+{{- range $shard := until (int .Values.clickhouse.shards) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "clickhouse.fullname" $ }}-shard{{ $shard }}
+  labels:
+    {{- include "clickhouse.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+    shard: "{{ $shard }}"
+spec:
+  selector:
+    matchLabels:
+      {{- include "clickhouse.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: clickhouse
+      shard: "{{ $shard }}"
+  {{- if $.Values.clickhouse.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ $.Values.clickhouse.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if $.Values.clickhouse.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ $.Values.clickhouse.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,100 @@
+{{- if .Values.keeper.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "clickhouse.fullname" . }}-keeper
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper
+spec:
+  serviceName: {{ include "clickhouse.fullname" . }}-keeper-headless
+  replicas: {{ .Values.keeper.replicas }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "clickhouse.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: keeper
+  template:
+    metadata:
+      labels:
+        {{- include "clickhouse.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: keeper
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/keeper-configmap.yaml") $ | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "clickhouse.keeperServiceAccountName" . }}
+      {{- with .Values.keeper.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: keeper
+          image: "{{ .Values.keeper.image.repository }}:{{ .Values.keeper.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.keeper.image.pullPolicy }}
+          env:
+            # Skip ClickHouse chown as Kubernetes handles permissions via fsGroup
+            - name: CLICKHOUSE_DO_NOT_CHOWN
+              value: "true"
+            - name: KEEPER_SERVER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
+            {{- if .Values.keeper.env }}
+            {{- toYaml .Values.keeper.env | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: tcp-client
+              containerPort: {{ .Values.ports.keeper.client }}
+            - name: tcp-raft
+              containerPort: {{ .Values.ports.keeper.raft }}
+            - name: http-control
+              containerPort: {{ .Values.ports.keeper.httpControl }}
+            {{- if .Values.keeper.metrics.enabled }}
+            - name: http-metrics
+              containerPort: {{ .Values.ports.keeper.metrics }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/clickhouse-keeper/keeper_config.d
+            - name: data
+              mountPath: /var/lib/clickhouse
+          resources:
+            {{- toYaml .Values.keeper.resources | nindent 12 }}
+          {{- with .Values.keeper.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.keeper.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "clickhouse.fullname" . }}-keeper-config
+        {{- if not .Values.keeper.persistentVolume.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+      {{- with .Values.keeper.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- include "clickhouse.keeperPodAntiAffinity" . | nindent 8 }}
+      {{- with .Values.keeper.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.keeper.persistentVolume.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: {{ .Values.keeper.persistentVolume.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.keeper.persistentVolume.size | quote }}
+  {{- end }}
+{{- end }}

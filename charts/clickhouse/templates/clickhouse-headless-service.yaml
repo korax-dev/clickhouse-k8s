@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "clickhouse.fullname" . }}-headless
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "clickhouse.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+  ports:
+    - name: http
+      port: {{ .Values.ports.clickhouse.http }}
+      targetPort: http
+    - name: tcp
+      port: {{ .Values.ports.clickhouse.tcp }}
+      targetPort: tcp
+    - name: http-interserv
+      port: {{ .Values.ports.clickhouse.interserver }}
+      targetPort: http-interserv
+    {{- if .Values.ports.clickhouse.mysql }}
+    - name: tcp-mysql
+      port: {{ .Values.ports.clickhouse.mysql }}
+      targetPort: tcp-mysql
+    {{- end }}
+    {{- if .Values.ports.clickhouse.postgresql }}
+    - name: tcp-postgresql
+      port: {{ .Values.ports.clickhouse.postgresql }}
+      targetPort: tcp-postgresql
+    {{- end }}

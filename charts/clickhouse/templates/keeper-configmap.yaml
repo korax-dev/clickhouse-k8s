@@ -1,0 +1,55 @@
+{{- if .Values.keeper.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "clickhouse.fullname" . }}-keeper-config
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper
+data:
+  00-default-keeper-config.yaml: |
+    logger:
+      level: {{ .Values.keeper.logLevel | default "information" }}
+      console: 1
+
+    {{- if .Values.keeper.metrics.enabled }}
+    prometheus:
+      endpoint: /metrics
+      port: {{ .Values.ports.keeper.metrics }}
+      metrics: true
+      events: true
+      asynchronous_metrics: true
+    {{- end }}
+
+    listen_host: 0.0.0.0
+    listen_host: "::"
+    listen_try: 1
+
+    keeper_server:
+      server_id:
+        '@from_env': KEEPER_SERVER_ID
+
+      tcp_port: {{ .Values.ports.keeper.client }}
+
+      http_control:
+        port: {{ .Values.ports.keeper.httpControl }}
+        readiness:
+          endpoint: /ready
+
+      coordination_settings:
+        operation_timeout_ms: 10000
+        session_timeout_ms: 30000
+        raft_logs_level: {{ .Values.keeper.logLevel | default "information" }}
+
+      raft_configuration:
+        server:
+          {{- range $i := until (int .Values.keeper.replicas) }}
+          - id: {{ $i }}
+            hostname: {{ include "clickhouse.fullname" $ }}-keeper-{{ $i }}.{{ include "clickhouse.fullname" $ }}-keeper-headless
+            port: {{ $.Values.ports.keeper.raft }}
+          {{- end }}
+  {{- if .Values.keeper.customConfig }}
+  99-custom-keeper-config.yaml: |
+    {{- toYaml .Values.keeper.customConfig | nindent 4 }}
+  {{- end }}
+{{- end }}

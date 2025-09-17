@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "clickhouse.fullname" . }}-config
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+data:
+  00-default-config.yaml: |
+    macros:
+      replica:
+        '@from_env': CLICKHOUSE_REPLICA_ID
+      shard:
+        '@from_env': CLICKHOUSE_SHARD_ID
+
+    logger:
+      level: {{ .Values.clickhouse.logLevel | default "information" }}
+      console: 1
+
+    http_port: {{ .Values.ports.clickhouse.http }}
+    tcp_port: {{ .Values.ports.clickhouse.tcp }}
+    interserver_http_port: {{ .Values.ports.clickhouse.interserver }}
+    mysql_port: {{ .Values.ports.clickhouse.mysql | default "null" }}
+    postgresql_port: {{ .Values.ports.clickhouse.postgresql | default "null" }}
+
+    {{- if .Values.clickhouse.metrics.enabled }}
+    prometheus:
+      endpoint: /metrics
+      port: {{ .Values.ports.clickhouse.metrics }}
+      metrics: true
+      events: true
+      asynchronous_metrics: true
+    {{- end }}
+
+    listen_host: 0.0.0.0
+    listen_host: "::"
+    listen_try: 1
+
+    remote_servers:
+      {{ .Values.clickhouse.clusterName }}:
+        shard:
+          {{- range $shard := until (int .Values.clickhouse.shards) }}
+          - replica:
+              {{- range $replica := until (int $.Values.clickhouse.replicasPerShard) }}
+              - host: {{ include "clickhouse.fullname" $ }}-shard{{ $shard }}-{{ $replica }}.{{ include "clickhouse.fullname" $ }}-headless
+                port: {{ $.Values.ports.clickhouse.tcp }}
+              {{- end }}
+          {{- end }}
+
+    {{- if .Values.clickhouse.interserverCredentials.enabled }}
+    interserver_http_credentials:
+      user:
+        '@from_env': CLICKHOUSE_INTERSERVER_USER
+      password:
+        '@from_env': CLICKHOUSE_INTERSERVER_PASSWORD
+    {{- end }}
+
+    {{- if .Values.keeper.enabled }}
+    zookeeper:
+      {{- if .Values.keeper.auth.enabled }}
+      identity:
+        '@from_env': CLICKHOUSE_KEEPER_AUTH
+      {{- end }}
+      node:
+        {{- range $i := until (int .Values.keeper.replicas) }}
+        - host: {{ include "clickhouse.fullname" $ }}-keeper-{{ $i }}.{{ include "clickhouse.fullname" $ }}-keeper-headless
+          port: {{ $.Values.ports.keeper.client }}
+        {{- end }}
+    {{- end }}
+
+    merge_tree:
+      storage_policy: {{ .Values.clickhouse.defaultStoragePolicy }}
+
+    {{- if .Values.clickhouse.storageConfiguration.enabled }}
+    storage_configuration:
+      {{- tpl .Values.clickhouse.storageConfiguration.configTemplate . | nindent 6 }}
+    {{- end }}
+  {{- if .Values.clickhouse.customConfig }}
+  99-custom-config.yaml: |
+    {{- toYaml .Values.clickhouse.customConfig | nindent 4 }}
+  {{- end }}

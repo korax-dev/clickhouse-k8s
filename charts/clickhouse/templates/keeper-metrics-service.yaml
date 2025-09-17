@@ -1,0 +1,18 @@
+{{- if and .Values.keeper.enabled .Values.keeper.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "clickhouse.fullname" . }}-keeper-metrics
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "clickhouse.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper
+  ports:
+    - name: http-metrics
+      port: {{ .Values.ports.keeper.metrics }}
+      targetPort: http-metrics
+{{- end }}

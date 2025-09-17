@@ -1,0 +1,460 @@
+# Core ClickHouse Configuration
+clickhouse:
+  # -- Number of shards in the ClickHouse cluster.
+  # Each shard contains a subset of the data and processes queries independently.
+  # @section -- ClickHouse Configuration
+  shards: 1
+
+  # -- Number of replicas per shard for high availability.
+  # Each replica contains the same data as others in the shard.
+  # @section -- ClickHouse Configuration
+  replicasPerShard: 1
+
+  # -- Name of the ClickHouse cluster
+  # @section -- ClickHouse Configuration
+  clusterName: default
+
+  # Pod image configuration
+  image:
+    # -- ClickHouse server image repository
+    # @section -- ClickHouse Configuration
+    repository: clickhouse/clickhouse-server
+    # -- ClickHouse server image tag (defaults to chart appVersion if empty)
+    # @section -- ClickHouse Configuration
+    tag: ""
+    # @ignored
+    pullPolicy: IfNotPresent
+
+  # -- Resource allocation for ClickHouse pods
+  # @ignored
+  resources: {}
+    # limits:
+    #   cpu: 1000m
+    #   memory: 1Gi
+    # requests:
+    #   cpu: 500m
+    #   memory: 512Mi
+
+  # Authentication settings for ClickHouse
+  auth:
+    # -- Enable authentication for ClickHouse
+    # @section -- Authentication
+    enabled: false
+    # -- Create a secret for credentials (if false, secretName must reference an existing secret)
+    # @section -- Authentication
+    createSecret: true
+    # -- Name of the secret to create or use (auto-generated if empty)
+    # Existing secret must have keys: 'username' and 'password'
+    # @section -- Authentication
+    secretName: ""
+    # -- Username (used when createSecret is true)
+    # @section -- Authentication
+    username: "default"
+    # -- Password (used when createSecret is true)
+    # @section -- Authentication
+    password: ""
+    # -- Enable ClickHouse's access management system for creating/managing users via SQL
+    # @section -- Authentication
+    accessManagement: false
+    # -- Set to true to skip automatic user setup, allowing the insecure 'default' user to be available.
+    # @section -- Authentication
+    skipUserSetup: false
+
+  # Interserver communication credentials
+  interserverCredentials:
+    # -- Enable authentication between ClickHouse servers
+    # @section -- Authentication
+    enabled: false
+    # -- Create a secret for credentials (if false, secretName must reference an existing secret)
+    # @section -- Authentication
+    createSecret: true
+    # -- Name of the secret to create or use (auto-generated if empty)
+    # Existing secret must have keys: 'username' and 'password'
+    # @section -- Authentication
+    secretName: ""
+    # -- Username (used when createSecret is true)
+    # @section -- Authentication
+    username: "interserver"
+    # -- Password (used when createSecret is true)
+    # @section -- Authentication
+    password: ""
+
+  # Database configuration
+  database:
+    # -- Name of the default database to create during initialization
+    # @section -- ClickHouse Configuration
+    name: ""
+
+  # Initialization scripts configuration
+  initdb:
+    # -- Always run initdb scripts even if database already exists
+    # @section -- ClickHouse Configuration
+    alwaysRun: false
+    # -- Name of an existing secret containing initialization scripts
+    # @section -- ClickHouse Configuration
+    existingSecret: ""
+    # -- Scripts to run during initialization
+    # @section -- ClickHouse Configuration
+    scripts: {}
+      # init.sql: |
+      #   CREATE DATABASE IF NOT EXISTS my_database;
+
+  # Metrics configuration
+  metrics:
+    # -- Enable Prometheus metrics
+    # @section -- ClickHouse Configuration
+    enabled: false
+
+  # Storage configuration
+  persistentVolume:
+    # -- Enable persistent storage for ClickHouse
+    # @section -- Storage
+    enabled: true
+    # -- Storage class to use for persistent volumes (uses default if empty)
+    # @section -- Storage
+    storageClass: ""
+    # -- Size of persistent volume for ClickHouse data
+    # @section -- Storage
+    size: 20Gi
+
+  # -- Storage policy to use as default for MergeTree tables
+  # Set to 's3' to match the policy name defined in configTemplate (policies.s3)
+  # @section -- Storage
+  defaultStoragePolicy: default
+
+  # Custom storage configuration for ClickHouse
+  storageConfiguration:
+    # -- Enable custom storage configuration (S3, etc.)
+    # @section -- Storage
+    enabled: false
+    # -- S3-compatible storage endpoint URL.
+    # Example: https://<bucket>.s3.<region>.amazonaws.com/<path>/
+    # @section -- Storage
+    s3Endpoint: ~
+    # -- Custom storage configuration template.
+    # Configures disks and storage policies for ClickHouse.
+    # @default -- See Values
+    # @section -- Storage
+    configTemplate: |
+      disks:
+        s3_disk:
+          type: object_storage
+          object_storage_type: s3
+          metadata_type: local
+          endpoint: {{ .Values.clickhouse.storageConfiguration.s3Endpoint }}
+          use_environment_credentials: true
+          metadata_path: /var/lib/clickhouse/disks/s3_disk/
+        s3_cache:
+          type: cache
+          disk: s3_disk
+          path: /var/lib/clickhouse/disks/s3_cache/
+          max_size: 10Gi
+      policies:
+        s3:
+          volumes:
+            main:
+              disk: s3_disk
+
+  # -- Logging level for ClickHouse.
+  # Valid values: none, fatal, critical, error, warning, notice, information, debug, trace.
+  # @section -- ClickHouse Configuration
+  logLevel: "information"
+
+  # Pod anti-affinity settings for ClickHouse
+  podAntiAffinity:
+    # -- Pod anti-affinity type: can be "soft" or "hard"
+    # @section -- ClickHouse Configuration
+    type: "soft"
+    # -- Weight for soft pod anti-affinity (ignored if type is hard)
+    # @section -- ClickHouse Configuration
+    weight: 100
+    # -- Topology key for pod anti-affinity
+    # @section -- ClickHouse Configuration
+    topologyKey: "kubernetes.io/hostname"
+
+  # -- Custom affinity rules for ClickHouse pods - if specified, will override default pod anti-affinity
+  # @section -- ClickHouse Configuration
+  affinity: {}
+
+  # PodDisruptionBudget configuration for ClickHouse
+  podDisruptionBudget:
+    # -- Enable PodDisruptionBudget for ClickHouse
+    # @section -- ClickHouse Configuration
+    enabled: true
+    # -- Minimum number of pods that must be available
+    # minAvailable: 1
+    # -- Maximum number of pods that can be unavailable
+    # @section -- ClickHouse Configuration
+    maxUnavailable: 1
+
+  # @ignored
+  livenessProbe:
+    tcpSocket:
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 1
+
+  # @ignored
+  readinessProbe:
+    httpGet:
+      path: /ping
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 1
+
+  # -- Security context for ClickHouse pods.
+  # UID 101 is the clickhouse user in the official Docker image.
+  # @section -- ClickHouse Configuration
+  securityContext:
+    runAsUser: 101
+    runAsGroup: 101
+    fsGroup: 101
+
+  # Service account configuration
+  serviceAccount:
+    # -- Create a service account for ClickHouse
+    # @section -- ClickHouse Configuration
+    create: true
+    # -- Name of the service account (if empty, generates based on fullname template)
+    # @section -- ClickHouse Configuration
+    name: ""
+    # -- Annotations to add to the service account
+    # @section -- ClickHouse Configuration
+    annotations: {}
+
+  # -- Custom ClickHouse configuration.
+  # This will be merged with the default configuration.
+  # @section -- ClickHouse Configuration
+  customConfig: {}
+
+  # @ignored
+  nodeSelector: {}
+
+  # @ignored
+  tolerations: []
+
+  # -- Custom environment variables for ClickHouse containers
+  # @section -- ClickHouse Configuration
+  env: []
+
+# ClickHouse Keeper Configuration
+keeper:
+  # -- Enable ClickHouse Keeper for cluster coordination
+  # @section -- Keeper Configuration
+  enabled: false
+
+  # -- Number of Keeper replicas for high availability.
+  # Should be an odd number (typically 3 or 5) for consensus.
+  # @section -- Keeper Configuration
+  replicas: 3
+
+  # Keeper image configuration
+  image:
+    # -- ClickHouse Keeper image repository
+    # @section -- Keeper Configuration
+    repository: clickhouse/clickhouse-keeper
+    # -- ClickHouse Keeper image tag (defaults to chart appVersion if empty)
+    # @section -- Keeper Configuration
+    tag: ""
+    # @ignored
+    pullPolicy: IfNotPresent
+
+  # Authentication for ClickHouse Keeper
+  auth:
+    # -- Enable authentication for Keeper
+    # @section -- Authentication
+    enabled: false
+    # -- Create a secret for credentials (if false, existing secret must be provided)
+    # @section -- Authentication
+    createSecret: true
+    # -- Name of the secret to create or use (auto-generated if empty)
+    # @section -- Authentication
+    secretName: ""
+    # -- Key in secret that contains auth string in "username:password" format
+    # @section -- Authentication
+    secretKey: "auth-string"
+    # -- Username (used when createSecret is true)
+    # @section -- Authentication
+    username: "keeper"
+    # -- Password (used when createSecret is true)
+    # @section -- Authentication
+    password: ""
+
+    # Configuration for the authentication setup job
+    setup:
+      # Keeper auth setup image configuration
+      image:
+        # -- ClickHouse Keeper auth setup image repository.
+        # ZooKeeper image is used because it contains the zkCli.sh utility.
+        # @section -- Keeper Configuration
+        repository: "zookeeper"
+        # @ignored
+        tag: "latest"
+        # @ignored
+        pullPolicy: "IfNotPresent"
+      # @ignored
+      resources: {}
+      # @ignored
+      backoffLimit: 6
+      # @ignored
+      ttlSecondsAfterFinished: 3600
+      # @ignored
+      activeDeadlineSeconds: 600
+      # @ignored
+      nodeSelector: {}
+      # @ignored
+      affinity: {}
+      # @ignored
+      tolerations: []
+
+  # Metrics configuration for Keeper
+  metrics:
+    # -- Enable Prometheus metrics for Keeper
+    # @section -- Keeper Configuration
+    enabled: false
+
+  # Storage configuration for Keeper
+  persistentVolume:
+    # -- Enable persistent storage for Keeper
+    # @section -- Storage
+    enabled: true
+    # -- Storage class to use (uses default if empty)
+    # @section -- Storage
+    storageClass: ""
+    # -- Size of persistent volume for Keeper data
+    # @section -- Storage
+    size: 1Gi
+
+  # -- Resource allocation for Keeper pods
+  # @ignored
+  resources: {}
+    # limits:
+    #   cpu: 500m
+    #   memory: 512Mi
+    # requests:
+    #   cpu: 250m
+    #   memory: 256Mi
+
+  # -- Logging level for Keeper.
+  # Valid values: none, fatal, critical, error, warning, notice, information, debug, trace.
+  # @section -- Keeper Configuration
+  logLevel: "information"
+
+  # Pod anti-affinity settings for Keeper
+  podAntiAffinity:
+    # -- Pod anti-affinity type: can be "soft" or "hard"
+    # @section -- Keeper Configuration
+    type: "soft"
+    # -- Weight for soft pod anti-affinity (ignored if type is hard)
+    # @section -- Keeper Configuration
+    weight: 100
+    # -- Topology key for pod anti-affinity
+    # @section -- Keeper Configuration
+    topologyKey: "kubernetes.io/hostname"
+
+  # -- Custom affinity rules for Keeper pods - if specified, will override default pod anti-affinity
+  # @section -- Keeper Configuration
+  affinity: {}
+
+  # PodDisruptionBudget configuration for Keeper
+  podDisruptionBudget:
+    # -- Enable PodDisruptionBudget for Keeper
+    # @section -- Keeper Configuration
+    enabled: true
+    # -- Minimum number of pods that must be available
+    # minAvailable: 1
+    # -- Maximum number of pods that can be unavailable
+    # @section -- Keeper Configuration
+    maxUnavailable: 1
+
+  # @ignored
+  livenessProbe:
+    httpGet:
+      path: /ready
+      port: http-control
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  # @ignored
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: http-control
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  # -- Security context for Keeper pods.
+  # UID 101 is the clickhouse user in the official Docker image.
+  # @section -- Keeper Configuration
+  securityContext:
+    runAsUser: 101
+    runAsGroup: 101
+    fsGroup: 101
+
+  # Service account configuration
+  serviceAccount:
+    # -- Create a service account for ClickHouse
+    # @section -- Keeper Configuration
+    create: true
+    # -- Name of the service account (if empty, generates based on fullname template)
+    # @section -- Keeper Configuration
+    name: ""
+    # -- Annotations to add to the service account
+    # @section -- Keeper Configuration
+    annotations: {}
+
+  # -- Custom Keeper configuration.
+  # This will be merged with the default configuration.
+  # @section -- Keeper Configuration
+  customConfig: {}
+
+  # @ignored
+  nodeSelector: {}
+
+  # @ignored
+  tolerations: []
+
+  # -- Custom environment variables for Keeper containers
+  # @section -- Keeper Configuration
+  env: []
+
+# Network port configuration
+ports:
+  # ClickHouse port configuration
+  clickhouse:
+    # -- HTTP interface port for queries and REST API
+    # @section -- Network Configuration
+    http: 8123
+    # -- Native interface port for ClickHouse clients
+    # @section -- Network Configuration
+    tcp: 9000
+    # -- Inter-server communication port for replication
+    # @section -- Network Configuration
+    interserver: 9009
+    # -- MySQL emulation port (null disables the service)
+    # Example: 9004
+    # @section -- Network Configuration
+    mysql: null
+    # -- PostgreSQL emulation port (null disables the service)
+    # Example: 9005
+    # @section -- Network Configuration
+    postgresql: null
+    # -- Prometheus metrics port
+    # @section -- Network Configuration
+    metrics: 9363
+  # Keeper port configuration
+  keeper:
+    # -- Client connection port
+    # @section -- Network Configuration
+    client: 9181
+    # -- Raft protocol port for Keeper consensus
+    # @section -- Network Configuration
+    raft: 9234
+    # -- HTTP control interface port for health checks
+    # @section -- Network Configuration
+    httpControl: 9182
+    # -- Prometheus metrics port
+    # @section -- Network Configuration
+    metrics: 9363

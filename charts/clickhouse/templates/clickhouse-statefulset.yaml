@@ -1,0 +1,169 @@
+{{- template "clickhouse.validateKeeperRequirement" . -}}
+{{- range $shard := until (int .Values.clickhouse.shards) }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "clickhouse.fullname" $ }}-shard{{ $shard }}
+  labels:
+    {{- include "clickhouse.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+    shard: "{{ $shard }}"
+spec:
+  serviceName: {{ include "clickhouse.fullname" $ }}-headless
+  replicas: {{ $.Values.clickhouse.replicasPerShard }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "clickhouse.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: clickhouse
+      shard: "{{ $shard }}"
+  template:
+    metadata:
+      labels:
+        {{- include "clickhouse.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: clickhouse
+        shard: "{{ $shard }}"
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/clickhouse-configmap.yaml") $ | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "clickhouse.serviceAccountName" $ }}
+      {{- with $.Values.clickhouse.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: clickhouse
+          image: "{{ $.Values.clickhouse.image.repository }}:{{ $.Values.clickhouse.image.tag | default $.Chart.AppVersion }}"
+          imagePullPolicy: {{ $.Values.clickhouse.image.pullPolicy }}
+          env:
+            # Skip ClickHouse chown as Kubernetes handles permissions via fsGroup
+            - name: CLICKHOUSE_DO_NOT_CHOWN
+              value: "1"
+            - name: CLICKHOUSE_SHARD_ID
+              value: "{{ $shard }}"
+            - name: CLICKHOUSE_REPLICA_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
+            {{- if $.Values.clickhouse.initdb.alwaysRun }}
+            - name: CLICKHOUSE_ALWAYS_RUN_INITDB_SCRIPTS
+              value: "true"
+            {{- end }}
+            {{- if $.Values.clickhouse.auth.enabled }}
+            - name: CLICKHOUSE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.authSecretName" $ }}
+                  key: username
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.authSecretName" $ }}
+                  key: password
+            - name: CLICKHOUSE_ACCESS_MANAGEMENT
+              value: {{ $.Values.clickhouse.auth.accessManagement | ternary "1" "0" | quote }}
+            {{- if $.Values.clickhouse.auth.skipUserSetup }}
+            - name: CLICKHOUSE_SKIP_USER_SETUP
+              value: "1"
+            {{- end }}
+            {{- end }}
+            {{- if $.Values.clickhouse.interserverCredentials.enabled }}
+            - name: CLICKHOUSE_INTERSERVER_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.interserverSecretName" $ }}
+                  key: username
+            - name: CLICKHOUSE_INTERSERVER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.interserverSecretName" $ }}
+                  key: password
+            {{- end }}
+            {{- if $.Values.clickhouse.database.name }}
+            - name: CLICKHOUSE_DB
+              value: {{ $.Values.clickhouse.database.name | quote }}
+            {{- end }}
+            {{- if and $.Values.keeper.enabled $.Values.keeper.auth.enabled }}
+            - name: CLICKHOUSE_KEEPER_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.keeperAuthSecretName" $ }}
+                  key: {{ $.Values.keeper.auth.secretKey }}
+            {{- end }}
+            {{- if $.Values.clickhouse.env }}
+            {{- toYaml $.Values.clickhouse.env | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ $.Values.ports.clickhouse.http }}
+            - name: tcp
+              containerPort: {{ $.Values.ports.clickhouse.tcp }}
+            - name: http-interserv
+              containerPort: {{ $.Values.ports.clickhouse.interserver }}
+            {{- if $.Values.ports.clickhouse.mysql }}
+            - name: tcp-mysql
+              containerPort: {{ $.Values.ports.clickhouse.mysql }}
+            {{- end }}
+            {{- if $.Values.ports.clickhouse.postgresql }}
+            - name: tcp-postgresql
+              containerPort: {{ $.Values.ports.clickhouse.postgresql }}
+            {{- end }}
+            {{- if $.Values.clickhouse.metrics.enabled }}
+            - name: http-metrics
+              containerPort: {{ $.Values.ports.clickhouse.metrics }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d
+            - name: data
+              mountPath: /var/lib/clickhouse
+            {{- if or $.Values.clickhouse.initdb.scripts $.Values.clickhouse.initdb.existingSecret }}
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+            {{- end }}
+          resources:
+            {{- toYaml $.Values.clickhouse.resources | nindent 12 }}
+          {{- with $.Values.clickhouse.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $.Values.clickhouse.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with $.Values.clickhouse.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- include "clickhouse.podAntiAffinity" (dict "context" $ "shard" $shard) | nindent 8 }}
+      {{- with $.Values.clickhouse.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "clickhouse.fullname" $ }}-config
+        {{- if or $.Values.clickhouse.initdb.scripts $.Values.clickhouse.initdb.existingSecret }}
+        - name: initdb
+          secret:
+            secretName: {{ include "clickhouse.initdbSecretName" $ }}
+        {{- end }}
+        {{- if not $.Values.clickhouse.persistentVolume.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+  {{- if $.Values.clickhouse.persistentVolume.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: {{ $.Values.clickhouse.persistentVolume.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ $.Values.clickhouse.persistentVolume.size | quote }}
+  {{- end }}
+{{- end }}

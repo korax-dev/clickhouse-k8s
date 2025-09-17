@@ -1,0 +1,226 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+{{ template "chart.versionBadge" . }}{{ template "chart.typeBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+## Features
+
+- **Distributed Architecture**: Configurable number of shards and replicas for scalability and high availability
+- **Persistent Storage**: Support for local volumes and S3-compatible object storage integration
+- **Security**: Authentication for ClickHouse, inter-server communication, and Keeper
+- **ClickHouse Keeper**: Built-in coordination service as a ZooKeeper replacement
+- **Customization**: Flexible configuration options and initialization scripts
+- **Metrics**: Optional Prometheus metrics integration
+
+## Storage Configuration
+
+### Local Storage
+
+By default, the chart uses PersistentVolumeClaims to store data. Storage class and size can be configured:
+
+```yaml
+clickhouse:
+  persistentVolume:
+    enabled: true
+    storageClass: ""
+    size: 20Gi
+```
+
+### S3 Storage
+
+ClickHouse supports using S3-compatible object storage for data storage:
+
+```yaml
+clickhouse:
+  # Set this to 's3' to use S3 storage as the default policy
+  defaultStoragePolicy: s3
+  
+  storageConfiguration:
+    enabled: true
+    s3Endpoint: https://bucket-name.s3.region-name.amazonaws.com/path/
+```
+
+The S3 configuration assumes credentials are available through the pod's environment (instance profile, environment variables, etc.). For other authentication methods, customize the configTemplate:
+
+```yaml
+clickhouse:
+  storageConfiguration:
+    enabled: true
+    s3Endpoint: https://bucket-name.s3.region-name.amazonaws.com/path/
+
+    configTemplate: |
+      disks:
+        s3_disk:
+          type: object_storage
+          object_storage_type: s3
+          metadata_type: local
+          endpoint: {{`{{ .Values.clickhouse.storageConfiguration.s3Endpoint }}`}}
+          # Use different auth method here - example for access/secret keys:
+          access_key_id: ACCESS_KEY
+          secret_access_key: SECRET_KEY
+          metadata_path: /var/lib/clickhouse/disks/s3_disk/
+        s3_cache:
+          type: cache
+          disk: s3_disk
+          path: /var/lib/clickhouse/disks/s3_cache/
+          max_size: 10Gi
+      policies:
+        s3:
+          volumes:
+            main:
+              disk: s3_disk
+```
+
+## Authentication Options
+
+### ClickHouse Authentication
+
+Secure access to ClickHouse servers with username and password authentication.
+
+```yaml
+clickhouse:
+  auth:
+    enabled: true
+    # Option 1: Chart-created secret
+    createSecret: true
+    username: "default"
+    password: "secure-password"
+    
+    # Option 2: Existing secret
+    createSecret: false
+    secretName: "clickhouse-auth" # Must contain keys: username, password
+```
+
+### Interserver Authentication
+
+Secure communication between ClickHouse nodes in a cluster.
+
+```yaml
+clickhouse:
+  interserverCredentials:
+    enabled: true
+    # Option 1: Chart-created secret
+    createSecret: true
+    username: "interserver"
+    password: "secure-password"
+    
+    # Option 2: Existing secret
+    createSecret: false
+    secretName: "clickhouse-interserver-auth" # Must contain keys: username, password
+```
+
+### Keeper Authentication
+
+Control access to ClickHouse Keeper service for metadata management.
+
+```yaml
+keeper:
+  auth:
+    enabled: true
+    # Option 1: Chart-created secret
+    createSecret: true
+    username: "keeper"
+    password: "secure-password"
+    
+    # Option 2: Existing secret
+    createSecret: false
+    secretName: "clickhouse-keeper-auth"
+    secretKey: "auth-string"  # Contains auth string in "username:password" format
+```
+
+> [!WARNING]
+> After initial deployment, Keeper authentication credentials cannot be changed using Helm.
+> Attempting to change these credentials will result in an error during Helm upgrade.
+> To change credentials, you must do so manually using ZooKeeper tools.
+
+## Configuration Options
+
+Both ClickHouse and ClickHouse Keeper can be customized with additional configuration parameters.
+
+### ClickHouse Custom Configuration
+
+```yaml
+clickhouse:
+  customConfig:
+    max_memory_usage: 10000000000
+    max_concurrent_queries: 100
+    log_queries_min_type: EXCEPTION_WHILE_PROCESSING
+```
+
+For more information about available ClickHouse Server settings, refer to the [ClickHouse Server Settings Documentation](https://clickhouse.com/docs/operations/server-configuration-parameters/settings).
+
+### ClickHouse Keeper Custom Configuration
+
+```yaml
+keeper:
+  customConfig:
+    keeper_server:
+      raft_settings:
+        min_session_timeout_ms: 10000
+        election_timeout_min: 1000
+      coordination_settings:
+        session_timeout_ms: 30000
+```
+
+For more information about available ClickHouse Keeper settings, refer to the [ClickHouse Keeper Documentation](https://clickhouse.com/docs/guides/sre/keeper/clickhouse-keeper).
+
+> [!TIP] Tip: Converting XML Configuration to YAML
+> Existing ClickHouse XML configurations can be converted to YAML using [yq](https://github.com/mikefarah/yq):
+>
+> ```bash
+> yq -oy '.' clickhouse_config.xml
+> ```
+
+## Deployment Example
+
+```yaml
+clickhouse:
+  # Number of independent shards (data partitioning)
+  shards: 1
+  # Number of replicas per shard (high availability)
+  replicasPerShard: 3
+
+  # Authentication configuration
+  auth:
+    enabled: true
+    createSecret: true
+    username: "default"
+    password: "secure-password"
+    accessManagement: true
+
+  # Secure inter-server communication
+  interserverCredentials:
+    enabled: true
+    username: "interserver"
+    password: "secure-interserver-password"
+
+  # S3 storage configuration
+  defaultStoragePolicy: "s3"
+  storageConfiguration:
+    enabled: true
+    s3Endpoint: "https://bucket-name.s3.region-name.amazonaws.com/data/"
+
+  # Local persistent storage for metadata and cache
+  persistentVolume:
+    enabled: true
+    size: 20Gi
+
+keeper:
+  # Enable ClickHouse Keeper for cluster coordination
+  enabled: true
+  replicas: 3
+
+  # Keeper authentication
+  auth:
+    enabled: true
+    username: "keeper"
+    password: "secure-keeper-password"
+
+  # Persistent storage for Keeper
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+```
+
+{{ template "chart.valuesSection" . }}

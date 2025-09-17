@@ -1,0 +1,9 @@
+clickhouse:
+  replicasPerShard: 3
+  persistentVolume:
+    enabled: false
+
+keeper:
+  enabled: true
+  persistentVolume:
+    enabled: false
