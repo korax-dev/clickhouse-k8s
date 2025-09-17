@@ -1,6 +1,6 @@
 apiVersion: v2
 name: clickhouse
-version: 0.2.0
+version: 0.2.1
 appVersion: 25.8.3-alpine
 description: A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
 type: application
