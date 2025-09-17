@@ -165,7 +165,7 @@ keeper:
 
 For more information about available ClickHouse Keeper settings, refer to the [ClickHouse Keeper Documentation](https://clickhouse.com/docs/guides/sre/keeper/clickhouse-keeper).
 
-> [!TIP] Tip: Converting XML Configuration to YAML
+> [!TIP]
 > Existing ClickHouse XML configurations can be converted to YAML using [yq](https://github.com/mikefarah/yq):
 >
 > ```bash
