@@ -1,19 +1,27 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": [
+    "config:recommended"
+  ],
   "customManagers": [
     {
       "customType": "regex",
       "description": "Update appVersion in Chart.yaml",
-      "fileMatch": ["^charts/clickhouse/Chart\\.yaml$"],
-      "matchStrings": ["appVersion:\\s+(?<currentValue>[^\\s]+)"],
+      "managerFilePatterns": [
+        "/^charts/clickhouse/Chart\\.yaml$/"
+      ],
+      "matchStrings": [
+        "appVersion:\\s+(?<currentValue>[^\\s]+)"
+      ],
       "depNameTemplate": "clickhouse/clickhouse-server",
       "datasourceTemplate": "docker"
     },
     {
       "customType": "regex",
       "description": "Update AppVersion badge in README.md",
-      "fileMatch": ["^charts/clickhouse/README\\.md$"],
+      "managerFilePatterns": [
+        "/^charts/clickhouse/README\\.md$/"
+      ],
       "matchStrings": [
         "AppVersion(?::\\s|-)(?<currentValue>\\d+\\.\\d+\\.\\d+(?:\\+\\d+)?)"
       ],
@@ -23,30 +31,46 @@
   ],
   "packageRules": [
     {
-      "matchFileNames": ["charts/**"],
+      "matchFileNames": [
+        "charts/**"
+      ],
       "bumpVersions": [
         {
           "name": "Chart",
-          "filePatterns": ["{{packageFileDir}}/Chart.yaml"],
-          "matchStrings": ["version:\\s(?<version>\\d+\\.\\d+\\.\\d+)"],
+          "filePatterns": [
+            "{{packageFileDir}}/Chart.yaml"
+          ],
+          "matchStrings": [
+            "version:\\s(?<version>\\d+\\.\\d+\\.\\d+)"
+          ],
           "bumpType": "patch"
         },
         {
           "name": "README, chart version text",
-          "filePatterns": ["{{packageFileDir}}/README.md"],
-          "matchStrings": ["\\[Version:\\s(?<version>\\d+\\.\\d+\\.\\d+)"],
+          "filePatterns": [
+            "{{packageFileDir}}/README.md"
+          ],
+          "matchStrings": [
+            "\\[Version:\\s(?<version>\\d+\\.\\d+\\.\\d+)"
+          ],
           "bumpType": "patch"
         },
         {
           "name": "README, chart version badge",
-          "filePatterns": ["{{packageFileDir}}/README.md"],
-          "matchStrings": ["\\/Version-(?<version>\\d+\\.\\d+\\.\\d+)"],
+          "filePatterns": [
+            "{{packageFileDir}}/README.md"
+          ],
+          "matchStrings": [
+            "\\/Version-(?<version>\\d+\\.\\d+\\.\\d+)"
+          ],
           "bumpType": "patch"
         }
       ]
     },
     {
-      "matchDepNames": ["clickhouse/clickhouse-server"],
+      "matchDepNames": [
+        "clickhouse/clickhouse-server"
+      ],
       "changelogUrl": "https://clickhouse.com/docs/whats-new/changelog",
       "commitMessagePrefix": "chore(chart):",
       "commitMessageTopic": "appVersion"
