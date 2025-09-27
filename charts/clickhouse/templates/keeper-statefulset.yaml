@@ -34,7 +34,7 @@ spec:
           env:
             # Skip ClickHouse chown as Kubernetes handles permissions via fsGroup
             - name: CLICKHOUSE_DO_NOT_CHOWN
-              value: "true"
+              value: "1"
             - name: KEEPER_SERVER_ID
               valueFrom:
                 fieldRef:
