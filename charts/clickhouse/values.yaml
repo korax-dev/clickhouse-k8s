@@ -224,6 +224,22 @@ clickhouse:
     # @section -- ClickHouse Configuration
     annotations: {}
 
+  # Additional user configuration
+  additionalUsers:
+    # -- Use an existing Secret containing the user config file
+    # Takes precedence over `content`
+    # @section -- Authentication
+    existingSecret: ""
+
+    # -- Key in the Secret that contains the user config (YAML or XML)
+    # Determines the filename under `/etc/clickhouse-server/users.d/`
+    # @section -- Authentication
+    secretKey: "extra-users.yaml"
+
+    # -- Inline user configuration (YAML or XML)
+    # @section -- Authentication
+    content: ""
+
   # -- Custom ClickHouse configuration.
   # This will be merged with the default configuration.
   # @section -- ClickHouse Configuration

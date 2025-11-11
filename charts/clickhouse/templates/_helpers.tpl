@@ -129,6 +129,17 @@ ClickHouse Init DB Secret name
 {{- end }}
 
 {{/*
+ClickHouse additional users secret name
+*/}}
+{{- define "clickhouse.usersdSecretName" -}}
+{{- if .Values.clickhouse.additionalUsers.secretName }}
+{{- .Values.clickhouse.additionalUsers.secretName }}
+{{- else }}
+{{- printf "%s-additional-users" (include "clickhouse.fullname" .) }}
+{{- end }}
+{{- end }}
+
+{{/*
 Default pod anti-affinity for Keeper
 */}}
 {{- define "clickhouse.keeperPodAntiAffinity" -}}

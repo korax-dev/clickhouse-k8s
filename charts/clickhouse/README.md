@@ -92,6 +92,53 @@ clickhouse:
     secretName: "clickhouse-auth" # Must contain keys: username, password
 ```
 
+### Additional User Configuration
+
+Define extra ClickHouse users beyond the primary authentication user.
+Supports both YAML and XML formats.
+
+```yaml
+clickhouse:
+  additionalUsers:
+    # Secret key containing the user config file (YAML or XML)
+    # The file extension should match the format, e.g.:
+    #   - extra-users.yaml for YAML
+    #   - extra-users.xml for XML
+    secretKey: extra-users.yaml
+
+    # Option 1: Inline configuration (YAML or XML)
+    # Example (YAML):
+    content: |
+      users:
+        analytics:
+          password: "analystpass"
+          profile: readonly
+          quota: default
+
+    # Example (XML):
+    content: |
+      <clickhouse>
+        <users>
+          <analytics>
+            <password>analystpass</password>
+            <profile>readonly</profile>
+            <quota>default</quota>
+          </analytics>
+        </users>
+      </clickhouse>
+
+    # Option 2: Existing secret (takes precedence over inline content)
+    existingSecret: "clickhouse-additional-users"
+```
+
+> [!NOTE]
+> Files in `/etc/clickhouse-server/users.d/` are loaded alphabetically;
+> `default-user.xml` from the base image is loaded first, so the secretKey should be named to apply afterward.
+
+> [!NOTE]
+> ClickHouse recommends using a [SQL-driven access management workflow](https://clickhouse.com/docs/operations/access-rights) (roles, users, and quotas managed via SQL) instead of configuration files.
+> This can be enabled by setting `clickhouse.auth.accessManagement=true` in the values file.
+
 ### Interserver Authentication
 
 Secure communication between ClickHouse nodes in a cluster.
@@ -225,6 +272,32 @@ keeper:
 
 ## Values
 
+### Authentication
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| clickhouse.additionalUsers.content | string | `""` | Inline user configuration (YAML or XML) |
+| clickhouse.additionalUsers.existingSecret | string | `""` | Use an existing Secret containing the user config file Takes precedence over `content` |
+| clickhouse.additionalUsers.secretKey | string | `"extra-users.yaml"` | Key in the Secret that contains the user config (YAML or XML) Determines the filename under `/etc/clickhouse-server/users.d/` |
+| clickhouse.auth.accessManagement | bool | `false` | Enable ClickHouse's access management system for creating/managing users via SQL |
+| clickhouse.auth.createSecret | bool | `true` | Create a secret for credentials (if false, secretName must reference an existing secret) |
+| clickhouse.auth.enabled | bool | `false` | Enable authentication for ClickHouse |
+| clickhouse.auth.password | string | `""` | Password (used when createSecret is true) |
+| clickhouse.auth.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty) Existing secret must have keys: 'username' and 'password' |
+| clickhouse.auth.skipUserSetup | bool | `false` | Set to true to skip automatic user setup, allowing the insecure 'default' user to be available. |
+| clickhouse.auth.username | string | `"default"` | Username (used when createSecret is true) |
+| clickhouse.interserverCredentials.createSecret | bool | `true` | Create a secret for credentials (if false, secretName must reference an existing secret) |
+| clickhouse.interserverCredentials.enabled | bool | `false` | Enable authentication between ClickHouse servers |
+| clickhouse.interserverCredentials.password | string | `""` | Password (used when createSecret is true) |
+| clickhouse.interserverCredentials.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty) Existing secret must have keys: 'username' and 'password' |
+| clickhouse.interserverCredentials.username | string | `"interserver"` | Username (used when createSecret is true) |
+| keeper.auth.createSecret | bool | `true` | Create a secret for credentials (if false, existing secret must be provided) |
+| keeper.auth.enabled | bool | `false` | Enable authentication for Keeper |
+| keeper.auth.password | string | `""` | Password (used when createSecret is true) |
+| keeper.auth.secretKey | string | `"auth-string"` | Key in secret that contains auth string in "username:password" format |
+| keeper.auth.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty) |
+| keeper.auth.username | string | `"keeper"` | Username (used when createSecret is true) |
+
 ### ClickHouse Configuration
 
 | Key | Type | Default | Description |
@@ -252,29 +325,6 @@ keeper:
 | clickhouse.serviceAccount.create | bool | `true` | Create a service account for ClickHouse |
 | clickhouse.serviceAccount.name | string | `""` | Name of the service account (if empty, generates based on fullname template) |
 | clickhouse.shards | int | `1` | Number of shards in the ClickHouse cluster. Each shard contains a subset of the data and processes queries independently. |
-
-### Authentication
-
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| clickhouse.auth.accessManagement | bool | `false` | Enable ClickHouse's access management system for creating/managing users via SQL |
-| clickhouse.auth.createSecret | bool | `true` | Create a secret for credentials (if false, secretName must reference an existing secret) |
-| clickhouse.auth.enabled | bool | `false` | Enable authentication for ClickHouse |
-| clickhouse.auth.password | string | `""` | Password (used when createSecret is true) |
-| clickhouse.auth.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty) Existing secret must have keys: 'username' and 'password' |
-| clickhouse.auth.skipUserSetup | bool | `false` | Set to true to skip automatic user setup, allowing the insecure 'default' user to be available. |
-| clickhouse.auth.username | string | `"default"` | Username (used when createSecret is true) |
-| clickhouse.interserverCredentials.createSecret | bool | `true` | Create a secret for credentials (if false, secretName must reference an existing secret) |
-| clickhouse.interserverCredentials.enabled | bool | `false` | Enable authentication between ClickHouse servers |
-| clickhouse.interserverCredentials.password | string | `""` | Password (used when createSecret is true) |
-| clickhouse.interserverCredentials.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty) Existing secret must have keys: 'username' and 'password' |
-| clickhouse.interserverCredentials.username | string | `"interserver"` | Username (used when createSecret is true) |
-| keeper.auth.createSecret | bool | `true` | Create a secret for credentials (if false, existing secret must be provided) |
-| keeper.auth.enabled | bool | `false` | Enable authentication for Keeper |
-| keeper.auth.password | string | `""` | Password (used when createSecret is true) |
-| keeper.auth.secretKey | string | `"auth-string"` | Key in secret that contains auth string in "username:password" format |
-| keeper.auth.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty) |
-| keeper.auth.username | string | `"keeper"` | Username (used when createSecret is true) |
 
 ### Storage
 
