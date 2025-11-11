@@ -114,10 +114,15 @@ spec:
               containerPort: {{ $.Values.ports.clickhouse.metrics }}
             {{- end }}
           volumeMounts:
-            - name: config
-              mountPath: /etc/clickhouse-server/config.d
             - name: data
               mountPath: /var/lib/clickhouse
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d
+            {{- if or $.Values.clickhouse.additionalUsers.content $.Values.clickhouse.additionalUsers.existingSecret }}
+            - name: usersd
+              mountPath: /etc/clickhouse-server/users.d/{{ $.Values.clickhouse.additionalUsers.secretKey }}
+              subPath: {{ $.Values.clickhouse.additionalUsers.secretKey }}
+            {{- end }}
             {{- if or $.Values.clickhouse.initdb.scripts $.Values.clickhouse.initdb.existingSecret }}
             - name: initdb
               mountPath: /docker-entrypoint-initdb.d
@@ -146,6 +151,11 @@ spec:
         - name: config
           configMap:
             name: {{ include "clickhouse.fullname" $ }}-config
+        {{- if or $.Values.clickhouse.additionalUsers.content $.Values.clickhouse.additionalUsers.existingSecret }}
+        - name: usersd
+          secret:
+            secretName: {{ include "clickhouse.usersdSecretName" $ }}
+        {{- end }}
         {{- if or $.Values.clickhouse.initdb.scripts $.Values.clickhouse.initdb.existingSecret }}
         - name: initdb
           secret:
