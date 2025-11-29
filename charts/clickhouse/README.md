@@ -341,7 +341,7 @@ keeper:
 | clickhouse.persistentVolume.storageClass | string | `""` | Storage class to use for persistent volumes (uses default if empty) |
 | clickhouse.storageConfiguration.configTemplate | string | See Values | Custom storage configuration template. Configures disks and storage policies for ClickHouse. |
 | clickhouse.storageConfiguration.enabled | bool | `false` | Enable custom storage configuration (S3, etc.) |
-| clickhouse.storageConfiguration.s3Endpoint | string | `nil` | S3-compatible storage endpoint URL. Example: https://<bucket>.s3.<region>.amazonaws.com/<path>/ |
+| clickhouse.storageConfiguration.s3Endpoint | string | `nil` | S3-compatible storage endpoint URL. Example: https://BUCKET.s3.REGION.amazonaws.com/PATH/ |
 | keeper.persistentVolume.enabled | bool | `true` | Enable persistent storage for Keeper |
 | keeper.persistentVolume.size | string | `"1Gi"` | Size of persistent volume for Keeper data |
 | keeper.persistentVolume.storageClass | string | `""` | Storage class to use (uses default if empty) |

@@ -128,7 +128,7 @@ clickhouse:
     # @section -- Storage
     enabled: false
     # -- S3-compatible storage endpoint URL.
-    # Example: https://<bucket>.s3.<region>.amazonaws.com/<path>/
+    # Example: https://BUCKET.s3.REGION.amazonaws.com/PATH/
     # @section -- Storage
     s3Endpoint: ~
     # -- Custom storage configuration template.
