@@ -43,8 +43,8 @@ clickhouse:
     # -- Create a secret for credentials (if false, secretName must reference an existing secret)
     # @section -- Authentication
     createSecret: true
-    # -- Name of the secret to create or use (auto-generated if empty)
-    # Existing secret must have keys: 'username' and 'password'
+    # -- Name of the secret to create or use (auto-generated if empty).
+    # Existing secret must have keys: 'username' and 'password'.
     # @section -- Authentication
     secretName: ""
     # -- Username (used when createSecret is true)
@@ -117,8 +117,8 @@ clickhouse:
     # @section -- Storage
     size: 20Gi
 
-  # -- Storage policy to use as default for MergeTree tables
-  # Set to 's3' to match the policy name defined in configTemplate (policies.s3)
+  # -- Storage policy to use as default for MergeTree tables.
+  # To use s3 by default, set to the respective policy name in the storage configTemplate (policies.NAME).
   # @section -- Storage
   defaultStoragePolicy: default
 
@@ -154,6 +154,10 @@ clickhouse:
           volumes:
             main:
               disk: s3_disk
+        s3_with_cache:
+          volumes:
+            main:
+              disk: s3_cache
 
   # -- Logging level for ClickHouse.
   # Valid values: none, fatal, critical, error, warning, notice, information, debug, trace.
