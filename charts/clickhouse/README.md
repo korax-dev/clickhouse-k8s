@@ -2,7 +2,7 @@
 
 A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
 
-![Version: 0.3.1](https://img.shields.io/badge/Version-0.3.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 25.11.1-alpine](https://img.shields.io/badge/AppVersion-25.11.1--alpine-informational?style=flat-square)
+![Version: 0.3.2](https://img.shields.io/badge/Version-0.3.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 25.11.1-alpine](https://img.shields.io/badge/AppVersion-25.11.1--alpine-informational?style=flat-square)
 
 ## Features
 
@@ -33,9 +33,10 @@ ClickHouse supports using S3-compatible object storage for data storage:
 
 ```yaml
 clickhouse:
-  # Set this to 's3' to use S3 storage as the default policy
-  defaultStoragePolicy: s3
- 
+  # Set this to 's3' to use S3 storage as the default policy,
+  # or 's3_with_cache' to use the S3-backed policy that includes a local cache
+  defaultStoragePolicy: s3_with_cache
+
   storageConfiguration:
     enabled: true
     s3Endpoint: https://bucket-name.s3.region-name.amazonaws.com/path/
@@ -70,6 +71,10 @@ clickhouse:
           volumes:
             main:
               disk: s3_disk
+        s3_with_cache:
+          volumes:
+            main:
+              disk: s3_cache
 ```
 
 ## Authentication Options
@@ -243,7 +248,7 @@ clickhouse:
     password: "secure-interserver-password"
 
   # S3 storage configuration
-  defaultStoragePolicy: "s3"
+  defaultStoragePolicy: s3_with_cache
   storageConfiguration:
     enabled: true
     s3Endpoint: "https://bucket-name.s3.region-name.amazonaws.com/data/"
@@ -283,7 +288,7 @@ keeper:
 | clickhouse.auth.createSecret | bool | `true` | Create a secret for credentials (if false, secretName must reference an existing secret) |
 | clickhouse.auth.enabled | bool | `false` | Enable authentication for ClickHouse |
 | clickhouse.auth.password | string | `""` | Password (used when createSecret is true) |
-| clickhouse.auth.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty) Existing secret must have keys: 'username' and 'password' |
+| clickhouse.auth.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty). Existing secret must have keys: 'username' and 'password'. |
 | clickhouse.auth.skipUserSetup | bool | `false` | Set to true to skip automatic user setup, allowing the insecure 'default' user to be available. |
 | clickhouse.auth.username | string | `"default"` | Username (used when createSecret is true) |
 | clickhouse.interserverCredentials.createSecret | bool | `true` | Create a secret for credentials (if false, secretName must reference an existing secret) |
@@ -330,7 +335,7 @@ keeper:
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| clickhouse.defaultStoragePolicy | string | `"default"` | Storage policy to use as default for MergeTree tables Set to 's3' to match the policy name defined in configTemplate (policies.s3) |
+| clickhouse.defaultStoragePolicy | string | `"default"` | Storage policy to use as default for MergeTree tables. To use s3 by default, set to the respective policy name in the storage configTemplate (policies.NAME). |
 | clickhouse.persistentVolume.enabled | bool | `true` | Enable persistent storage for ClickHouse |
 | clickhouse.persistentVolume.size | string | `"20Gi"` | Size of persistent volume for ClickHouse data |
 | clickhouse.persistentVolume.storageClass | string | `""` | Storage class to use for persistent volumes (uses default if empty) |

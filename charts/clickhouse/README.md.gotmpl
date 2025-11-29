@@ -33,9 +33,10 @@ ClickHouse supports using S3-compatible object storage for data storage:
 
 ```yaml
 clickhouse:
-  # Set this to 's3' to use S3 storage as the default policy
-  defaultStoragePolicy: s3
-  
+  # Set this to 's3' to use S3 storage as the default policy,
+  # or 's3_with_cache' to use the S3-backed policy that includes a local cache
+  defaultStoragePolicy: s3_with_cache
+
   storageConfiguration:
     enabled: true
     s3Endpoint: https://bucket-name.s3.region-name.amazonaws.com/path/
@@ -70,6 +71,10 @@ clickhouse:
           volumes:
             main:
               disk: s3_disk
+        s3_with_cache:
+          volumes:
+            main:
+              disk: s3_cache
 ```
 
 ## Authentication Options
@@ -243,7 +248,7 @@ clickhouse:
     password: "secure-interserver-password"
 
   # S3 storage configuration
-  defaultStoragePolicy: "s3"
+  defaultStoragePolicy: s3_with_cache
   storageConfiguration:
     enabled: true
     s3Endpoint: "https://bucket-name.s3.region-name.amazonaws.com/data/"
