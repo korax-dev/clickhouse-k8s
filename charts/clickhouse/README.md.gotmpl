@@ -39,8 +39,16 @@ clickhouse:
 
   storageConfiguration:
     enabled: true
-    s3Endpoint: https://bucket-name.s3.region-name.amazonaws.com/path/
+    s3Endpoint: https://mybucket.s3.myregion.amazonaws.com/clickhouse/{cluster}/{shard}/{replica}/
 ```
+
+> [!TIP]
+> Including `{cluster}`, `{shard}`, and `{replica}` placeholders in the
+> S3 endpoint is recommended. These placeholders are automatically replaced by
+> ClickHouse macros at runtime, ensuring that each shard and replica writes to a
+> unique path while all data belonging to the same cluster is organized under the
+> cluster name.
+
 
 The S3 configuration assumes credentials are available through the pod's environment (instance profile, environment variables, etc.). For other authentication methods, customize the configTemplate:
 
@@ -48,7 +56,7 @@ The S3 configuration assumes credentials are available through the pod's environ
 clickhouse:
   storageConfiguration:
     enabled: true
-    s3Endpoint: https://bucket-name.s3.region-name.amazonaws.com/path/
+    s3Endpoint: https://mybucket.s3.myregion.amazonaws.com/clickhouse/{cluster}/{shard}/{replica}/
 
     configTemplate: |
       disks:
@@ -251,7 +259,7 @@ clickhouse:
   defaultStoragePolicy: s3_with_cache
   storageConfiguration:
     enabled: true
-    s3Endpoint: "https://bucket-name.s3.region-name.amazonaws.com/data/"
+    s3Endpoint: "https://mybucket.s3.myregion.amazonaws.com/clickhouse/{cluster}/{shard}/{replica}/"
 
   # Local persistent storage for metadata and cache
   persistentVolume:

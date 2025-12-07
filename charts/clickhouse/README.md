@@ -2,7 +2,7 @@
 
 A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
 
-![Version: 0.3.3](https://img.shields.io/badge/Version-0.3.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 25.11.2-alpine](https://img.shields.io/badge/AppVersion-25.11.2--alpine-informational?style=flat-square)
+![Version: 0.3.4](https://img.shields.io/badge/Version-0.3.4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 25.11.2-alpine](https://img.shields.io/badge/AppVersion-25.11.2--alpine-informational?style=flat-square)
 
 ## Features
 
@@ -39,8 +39,15 @@ clickhouse:
 
   storageConfiguration:
     enabled: true
-    s3Endpoint: https://bucket-name.s3.region-name.amazonaws.com/path/
+    s3Endpoint: https://mybucket.s3.myregion.amazonaws.com/clickhouse/{cluster}/{shard}/{replica}/
 ```
+
+> [!TIP]
+> Including `{cluster}`, `{shard}`, and `{replica}` placeholders in the
+> S3 endpoint is recommended. These placeholders are automatically replaced by
+> ClickHouse macros at runtime, ensuring that each shard and replica writes to a
+> unique path while all data belonging to the same cluster is organized under the
+> cluster name.
 
 The S3 configuration assumes credentials are available through the pod's environment (instance profile, environment variables, etc.). For other authentication methods, customize the configTemplate:
 
@@ -48,7 +55,7 @@ The S3 configuration assumes credentials are available through the pod's environ
 clickhouse:
   storageConfiguration:
     enabled: true
-    s3Endpoint: https://bucket-name.s3.region-name.amazonaws.com/path/
+    s3Endpoint: https://mybucket.s3.myregion.amazonaws.com/clickhouse/{cluster}/{shard}/{replica}/
 
     configTemplate: |
       disks:
@@ -251,7 +258,7 @@ clickhouse:
   defaultStoragePolicy: s3_with_cache
   storageConfiguration:
     enabled: true
-    s3Endpoint: "https://bucket-name.s3.region-name.amazonaws.com/data/"
+    s3Endpoint: "https://mybucket.s3.myregion.amazonaws.com/clickhouse/{cluster}/{shard}/{replica}/"
 
   # Local persistent storage for metadata and cache
   persistentVolume:
@@ -341,7 +348,7 @@ keeper:
 | clickhouse.persistentVolume.storageClass | string | `""` | Storage class to use for persistent volumes (uses default if empty) |
 | clickhouse.storageConfiguration.configTemplate | string | See Values | Custom storage configuration template. Configures disks and storage policies for ClickHouse. |
 | clickhouse.storageConfiguration.enabled | bool | `false` | Enable custom storage configuration (S3, etc.) |
-| clickhouse.storageConfiguration.s3Endpoint | string | `nil` | S3-compatible storage endpoint URL. Example: `https://BUCKET.s3.REGION.amazonaws.com/PATH/` |
+| clickhouse.storageConfiguration.s3Endpoint | string | `nil` | S3-compatible storage endpoint URL. Example: `https://mybucket.s3.myregion.amazonaws.com/clickhouse/{cluster}/{shard}/{replica}/` |
 | keeper.persistentVolume.enabled | bool | `true` | Enable persistent storage for Keeper |
 | keeper.persistentVolume.size | string | `"1Gi"` | Size of persistent volume for Keeper data |
 | keeper.persistentVolume.storageClass | string | `""` | Storage class to use (uses default if empty) |

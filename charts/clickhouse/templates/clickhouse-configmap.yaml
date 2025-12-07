@@ -8,6 +8,7 @@ metadata:
 data:
   00-default-config.yaml: |
     macros:
+      cluster: {{ .Values.clickhouse.clusterName }}
       replica:
         '@from_env': CLICKHOUSE_REPLICA_ID
       shard:
