@@ -29,7 +29,7 @@ clickhouse:
 
 ### S3 Storage
 
-ClickHouse supports using S3-compatible object storage for data storage:
+This chart supports basic options to configure S3-compatible object storage for ClickHouse:
 
 ```yaml
 clickhouse:
@@ -49,14 +49,17 @@ clickhouse:
 > unique path while all data belonging to the same cluster is organized under the
 > cluster name.
 
-The S3 configuration assumes credentials are available through the pod's environment (instance profile, environment variables, etc.). For other authentication methods, customize the configTemplate:
+> [!NOTE]
+> The default S3 configuration assumes credentials are available through the pod's environment (instance profile, environment variables, etc.). For other authentication methods, customize the `configTemplate`.
+
+### Custom Storage Configuration
+
+Advanced storage options such as tiered storage or custom policies can be added by modifying the `configTemplate`:
 
 ```yaml
 clickhouse:
   storageConfiguration:
     enabled: true
-    s3Endpoint: https://mybucket.s3.myregion.amazonaws.com/clickhouse/{cluster}/{shard}/{replica}/
-
     configTemplate: |
       disks:
         s3_disk:
