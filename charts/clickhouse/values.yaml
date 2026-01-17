@@ -258,6 +258,13 @@ clickhouse:
   # -- Custom environment variables for ClickHouse containers
   # @section -- ClickHouse Configuration
   env: []
+    # - name: MY_ENV_VAR
+    #   value: MY_VALUE
+    # - name: MY_SECRET_VAR
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: my-secret
+    #       key: my-secret-key
 
 # ClickHouse Keeper Configuration
 keeper:
@@ -439,6 +446,13 @@ keeper:
   # -- Custom environment variables for Keeper containers
   # @section -- Keeper Configuration
   env: []
+    # - name: MY_ENV_VAR
+    #   value: MY_VALUE
+    # - name: MY_SECRET_VAR
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: my-secret
+    #       key: my-secret-key
 
 # Network port configuration
 ports:
