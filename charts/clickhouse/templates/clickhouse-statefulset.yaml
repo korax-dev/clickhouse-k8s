@@ -61,7 +61,7 @@ spec:
                 secretKeyRef:
                   name: {{ include "clickhouse.authSecretName" $ }}
                   key: password
-            - name: CLICKHOUSE_ACCESS_MANAGEMENT
+            - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
               value: {{ $.Values.clickhouse.auth.accessManagement | ternary "1" "0" | quote }}
             {{- if $.Values.clickhouse.auth.skipUserSetup }}
             - name: CLICKHOUSE_SKIP_USER_SETUP
