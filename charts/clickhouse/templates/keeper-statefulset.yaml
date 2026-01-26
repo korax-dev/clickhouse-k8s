@@ -60,6 +60,10 @@ spec:
               mountPath: /var/lib/clickhouse
           resources:
             {{- toYaml .Values.keeper.resources | nindent 12 }}
+          {{- with .Values.keeper.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.keeper.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

@@ -192,6 +192,14 @@ clickhouse:
     maxUnavailable: 1
 
   # @ignored
+  startupProbe: {}
+    # httpGet:
+    #   path: /ping
+    #   port: http
+    # failureThreshold: 30
+    # periodSeconds: 10
+
+  # @ignored
   livenessProbe:
     tcpSocket:
       port: http
@@ -395,6 +403,14 @@ keeper:
     # -- Maximum number of pods that can be unavailable
     # @section -- Keeper Configuration
     maxUnavailable: 1
+
+  # @ignored
+  startupProbe: {}
+    # httpGet:
+    #   path: /ready
+    #   port: http-control
+    # failureThreshold: 30
+    # periodSeconds: 10
 
   # @ignored
   livenessProbe:
