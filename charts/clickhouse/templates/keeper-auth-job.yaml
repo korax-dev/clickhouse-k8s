@@ -19,6 +19,9 @@ spec:
     metadata:
       labels:
         {{- include "clickhouse.selectorLabels" . | nindent 8 }}
+        {{- if .Values.keeper.auth.setup.labels }}
+          {{- .Values.keeper.auth.setup.labels | toYaml | nindent 8 }}
+        {{- end }}
         app.kubernetes.io/component: keeper-auth-setup
     spec:
       restartPolicy: OnFailure
