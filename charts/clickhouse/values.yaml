@@ -236,6 +236,18 @@ clickhouse:
     # @section -- ClickHouse Configuration
     annotations: {}
 
+  # Service configuration
+  service:
+    # -- Annotations to add to the ClickHouse service
+    # @section -- ClickHouse Configuration
+    annotations: {}
+
+  # Headless service configuration
+  headlessService:
+    # -- Annotations to add to the ClickHouse headless service
+    # @section -- ClickHouse Configuration
+    annotations: {}
+
   # Additional user configuration
   additionalUsers:
     # -- Use an existing Secret containing the user config file
@@ -445,6 +457,18 @@ keeper:
     # @section -- Keeper Configuration
     name: ""
     # -- Annotations to add to the service account
+    # @section -- Keeper Configuration
+    annotations: {}
+
+  # Headless service configuration
+  headlessService:
+    # -- Annotations to add to the Keeper headless service
+    # @section -- Keeper Configuration
+    annotations: {}
+
+  # Metrics service configuration
+  metricsService:
+    # -- Annotations to add to the Keeper metrics service
     # @section -- Keeper Configuration
     annotations: {}
 
