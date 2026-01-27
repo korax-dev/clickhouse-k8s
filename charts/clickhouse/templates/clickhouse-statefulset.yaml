@@ -24,8 +24,14 @@ spec:
         {{- include "clickhouse.selectorLabels" $ | nindent 8 }}
         app.kubernetes.io/component: clickhouse
         shard: "{{ $shard }}"
+        {{- with $.Values.clickhouse.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/clickhouse-configmap.yaml") $ | sha256sum }}
+        {{- with $.Values.clickhouse.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       serviceAccountName: {{ include "clickhouse.serviceAccountName" $ }}
       {{- with $.Values.clickhouse.securityContext }}

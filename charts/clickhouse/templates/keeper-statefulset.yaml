@@ -19,8 +19,14 @@ spec:
       labels:
         {{- include "clickhouse.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: keeper
+        {{- with .Values.keeper.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/keeper-configmap.yaml") $ | sha256sum }}
+        {{- with .Values.keeper.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       serviceAccountName: {{ include "clickhouse.keeperServiceAccountName" . }}
       {{- with .Values.keeper.securityContext }}

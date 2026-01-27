@@ -255,6 +255,14 @@ clickhouse:
   # @ignored
   tolerations: []
 
+  # -- Additional labels to add to ClickHouse pods
+  # @section -- ClickHouse Configuration
+  podLabels: {}
+
+  # -- Additional annotations to add to ClickHouse pods
+  # @section -- ClickHouse Configuration
+  podAnnotations: {}
+
   # -- Custom environment variables for ClickHouse containers
   # @section -- ClickHouse Configuration
   env: []
@@ -442,6 +450,14 @@ keeper:
 
   # @ignored
   tolerations: []
+
+  # -- Additional labels to add to Keeper pods
+  # @section -- Keeper Configuration
+  podLabels: {}
+
+  # -- Additional annotations to add to Keeper pods
+  # @section -- Keeper Configuration
+  podAnnotations: {}
 
   # -- Custom environment variables for Keeper containers
   # @section -- Keeper Configuration
