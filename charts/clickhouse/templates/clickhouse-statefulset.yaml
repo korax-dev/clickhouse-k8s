@@ -12,7 +12,15 @@ metadata:
 spec:
   serviceName: {{ include "clickhouse.fullname" $ }}-headless
   replicas: {{ $.Values.clickhouse.replicasPerShard }}
-  podManagementPolicy: Parallel
+  podManagementPolicy: {{ $.Values.clickhouse.statefulSet.podManagementPolicy }}
+  minReadySeconds: {{ $.Values.clickhouse.statefulSet.minReadySeconds }}
+  revisionHistoryLimit: {{ $.Values.clickhouse.statefulSet.revisionHistoryLimit }}
+  updateStrategy:
+    type: {{ $.Values.clickhouse.statefulSet.updateStrategy.type }}
+    {{- if and (eq $.Values.clickhouse.statefulSet.updateStrategy.type "RollingUpdate") $.Values.clickhouse.statefulSet.updateStrategy.partition }}
+    rollingUpdate:
+      partition: {{ $.Values.clickhouse.statefulSet.updateStrategy.partition }}
+    {{- end }}
   selector:
     matchLabels:
       {{- include "clickhouse.selectorLabels" $ | nindent 6 }}
