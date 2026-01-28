@@ -192,6 +192,14 @@ clickhouse:
     maxUnavailable: 1
 
   # @ignored
+  startupProbe: {}
+    # httpGet:
+    #   path: /ping
+    #   port: http
+    # failureThreshold: 30
+    # periodSeconds: 10
+
+  # @ignored
   livenessProbe:
     tcpSocket:
       port: http
@@ -225,6 +233,18 @@ clickhouse:
     # @section -- ClickHouse Configuration
     name: ""
     # -- Annotations to add to the service account
+    # @section -- ClickHouse Configuration
+    annotations: {}
+
+  # Service configuration
+  service:
+    # -- Annotations to add to the ClickHouse service
+    # @section -- ClickHouse Configuration
+    annotations: {}
+
+  # Headless service configuration
+  headlessService:
+    # -- Annotations to add to the ClickHouse headless service
     # @section -- ClickHouse Configuration
     annotations: {}
 
@@ -397,6 +417,14 @@ keeper:
     maxUnavailable: 1
 
   # @ignored
+  startupProbe: {}
+    # httpGet:
+    #   path: /ready
+    #   port: http-control
+    # failureThreshold: 30
+    # periodSeconds: 10
+
+  # @ignored
   livenessProbe:
     httpGet:
       path: /ready
@@ -429,6 +457,18 @@ keeper:
     # @section -- Keeper Configuration
     name: ""
     # -- Annotations to add to the service account
+    # @section -- Keeper Configuration
+    annotations: {}
+
+  # Headless service configuration
+  headlessService:
+    # -- Annotations to add to the Keeper headless service
+    # @section -- Keeper Configuration
+    annotations: {}
+
+  # Metrics service configuration
+  metricsService:
+    # -- Annotations to add to the Keeper metrics service
     # @section -- Keeper Configuration
     annotations: {}
 

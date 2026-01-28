@@ -84,12 +84,20 @@ spec:
             - name: CLICKHOUSE_DB
               value: {{ $.Values.clickhouse.database.name | quote }}
             {{- end }}
-            {{- if and $.Values.keeper.enabled $.Values.keeper.auth.enabled }}
+            {{- if $.Values.keeper.enabled }}
+            {{- if $.Values.keeper.auth.enabled }}
             - name: CLICKHOUSE_KEEPER_AUTH
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clickhouse.keeperAuthSecretName" $ }}
                   key: {{ $.Values.keeper.auth.secretKey }}
+            {{- end }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: CLICKHOUSE_HOST_NAME
+              value: "$(POD_NAME).{{ include "clickhouse.fullname" $ }}-headless"
             {{- end }}
             {{- if $.Values.clickhouse.env }}
             {{- toYaml $.Values.clickhouse.env | nindent 12 }}
@@ -129,6 +137,10 @@ spec:
             {{- end }}
           resources:
             {{- toYaml $.Values.clickhouse.resources | nindent 12 }}
+          {{- with $.Values.clickhouse.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with $.Values.clickhouse.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

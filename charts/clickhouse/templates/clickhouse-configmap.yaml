@@ -67,6 +67,9 @@ data:
         - host: {{ include "clickhouse.fullname" $ }}-keeper-{{ $i }}.{{ include "clickhouse.fullname" $ }}-keeper-headless
           port: {{ $.Values.ports.keeper.client }}
         {{- end }}
+    distributed_ddl:
+      host_name:
+        "@from_env": CLICKHOUSE_HOST_NAME
     {{- end }}
 
     merge_tree:

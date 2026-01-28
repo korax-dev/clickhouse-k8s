@@ -5,6 +5,10 @@ metadata:
   labels:
     {{- include "clickhouse.labels" . | nindent 4 }}
     app.kubernetes.io/component: clickhouse
+  {{- with .Values.clickhouse.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: ClusterIP
   selector:
