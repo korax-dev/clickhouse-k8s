@@ -12,7 +12,15 @@ metadata:
 spec:
   serviceName: {{ include "clickhouse.fullname" $ }}-headless
   replicas: {{ $.Values.clickhouse.replicasPerShard }}
-  podManagementPolicy: Parallel
+  podManagementPolicy: {{ $.Values.clickhouse.statefulSet.podManagementPolicy }}
+  minReadySeconds: {{ $.Values.clickhouse.statefulSet.minReadySeconds }}
+  revisionHistoryLimit: {{ $.Values.clickhouse.statefulSet.revisionHistoryLimit }}
+  updateStrategy:
+    type: {{ $.Values.clickhouse.statefulSet.updateStrategy.type }}
+    {{- if and (eq $.Values.clickhouse.statefulSet.updateStrategy.type "RollingUpdate") $.Values.clickhouse.statefulSet.updateStrategy.partition }}
+    rollingUpdate:
+      partition: {{ $.Values.clickhouse.statefulSet.updateStrategy.partition }}
+    {{- end }}
   selector:
     matchLabels:
       {{- include "clickhouse.selectorLabels" $ | nindent 6 }}
@@ -24,8 +32,14 @@ spec:
         {{- include "clickhouse.selectorLabels" $ | nindent 8 }}
         app.kubernetes.io/component: clickhouse
         shard: "{{ $shard }}"
+        {{- with $.Values.clickhouse.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/clickhouse-configmap.yaml") $ | sha256sum }}
+        {{- with $.Values.clickhouse.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       serviceAccountName: {{ include "clickhouse.serviceAccountName" $ }}
       {{- with $.Values.clickhouse.securityContext }}

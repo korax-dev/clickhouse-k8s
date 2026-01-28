@@ -191,6 +191,26 @@ clickhouse:
     # @section -- ClickHouse Configuration
     maxUnavailable: 1
 
+  # StatefulSet configuration
+  statefulSet:
+    # -- Pod management policy for StatefulSet.
+    # OrderedReady: pods are created sequentially. Parallel: pods are created in parallel.
+    # @section -- ClickHouse Configuration
+    podManagementPolicy: Parallel
+    # -- Minimum seconds a pod must be ready before being considered available
+    # @section -- ClickHouse Configuration
+    minReadySeconds: 0
+    # -- Number of old ReplicaSets to retain for rollback
+    # @section -- ClickHouse Configuration
+    revisionHistoryLimit: 10
+    # -- Update strategy for StatefulSet
+    # @section -- ClickHouse Configuration
+    updateStrategy:
+      # -- Type of update strategy: RollingUpdate or OnDelete
+      type: RollingUpdate
+      # -- Partition for rolling update (pods with ordinal >= partition are updated)
+      # partition: 0
+
   # @ignored
   startupProbe: {}
     # httpGet:
@@ -274,6 +294,14 @@ clickhouse:
 
   # @ignored
   tolerations: []
+
+  # -- Additional labels to add to ClickHouse pods
+  # @section -- ClickHouse Configuration
+  podLabels: {}
+
+  # -- Additional annotations to add to ClickHouse pods
+  # @section -- ClickHouse Configuration
+  podAnnotations: {}
 
   # -- Custom environment variables for ClickHouse containers
   # @section -- ClickHouse Configuration
@@ -418,6 +446,26 @@ keeper:
     # @section -- Keeper Configuration
     maxUnavailable: 1
 
+  # StatefulSet configuration
+  statefulSet:
+    # -- Pod management policy for StatefulSet.
+    # OrderedReady: pods are created sequentially. Parallel: pods are created in parallel.
+    # @section -- Keeper Configuration
+    podManagementPolicy: Parallel
+    # -- Minimum seconds a pod must be ready before being considered available
+    # @section -- Keeper Configuration
+    minReadySeconds: 0
+    # -- Number of old ReplicaSets to retain for rollback
+    # @section -- Keeper Configuration
+    revisionHistoryLimit: 10
+    # -- Update strategy for StatefulSet
+    # @section -- Keeper Configuration
+    updateStrategy:
+      # -- Type of update strategy: RollingUpdate or OnDelete
+      type: RollingUpdate
+      # -- Partition for rolling update (pods with ordinal >= partition are updated)
+      # partition: 0
+
   # @ignored
   startupProbe: {}
     # httpGet:
@@ -484,6 +532,14 @@ keeper:
 
   # @ignored
   tolerations: []
+
+  # -- Additional labels to add to Keeper pods
+  # @section -- Keeper Configuration
+  podLabels: {}
+
+  # -- Additional annotations to add to Keeper pods
+  # @section -- Keeper Configuration
+  podAnnotations: {}
 
   # -- Custom environment variables for Keeper containers
   # @section -- Keeper Configuration
