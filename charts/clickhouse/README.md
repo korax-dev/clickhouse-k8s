@@ -2,7 +2,7 @@
 
 A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
 
-![Version: 0.3.9](https://img.shields.io/badge/Version-0.3.9-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 25.12.4-alpine](https://img.shields.io/badge/AppVersion-25.12.4--alpine-informational?style=flat-square)
+![Version: 0.4.0](https://img.shields.io/badge/Version-0.4.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 25.12.4-alpine](https://img.shields.io/badge/AppVersion-25.12.4--alpine-informational?style=flat-square)
 
 ## Features
 
@@ -293,7 +293,7 @@ keeper:
 |-----|------|---------|-------------|
 | clickhouse.additionalUsers.content | string | `""` | Inline user configuration (YAML or XML) |
 | clickhouse.additionalUsers.existingSecret | string | `""` | Use an existing Secret containing the user config file Takes precedence over `content` |
-| clickhouse.additionalUsers.secretKey | string | `"extra-users.yaml"` | Key in the Secret that contains the user config (YAML or XML) Determines the filename under `/etc/clickhouse-server/users.d/` |
+| clickhouse.additionalUsers.secretKey | string | `"extra-users.yaml"` | Key in the Secret that contains the user config (YAML or XML). Determines the filename under `/etc/clickhouse-server/users.d/`. |
 | clickhouse.auth.accessManagement | bool | `false` | Enable ClickHouse's access management system for creating/managing users via SQL |
 | clickhouse.auth.createSecret | bool | `true` | Create a secret for credentials (if false, secretName must reference an existing secret) |
 | clickhouse.auth.enabled | bool | `false` | Enable authentication for ClickHouse |
@@ -304,7 +304,7 @@ keeper:
 | clickhouse.interserverCredentials.createSecret | bool | `true` | Create a secret for credentials (if false, secretName must reference an existing secret) |
 | clickhouse.interserverCredentials.enabled | bool | `false` | Enable authentication between ClickHouse servers |
 | clickhouse.interserverCredentials.password | string | `""` | Password (used when createSecret is true) |
-| clickhouse.interserverCredentials.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty) Existing secret must have keys: 'username' and 'password' |
+| clickhouse.interserverCredentials.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty). Existing secret must have keys: 'username' and 'password'. |
 | clickhouse.interserverCredentials.username | string | `"interserver"` | Username (used when createSecret is true) |
 | keeper.auth.createSecret | bool | `true` | Create a secret for credentials (if false, existing secret must be provided) |
 | keeper.auth.enabled | bool | `false` | Enable authentication for Keeper |
@@ -322,6 +322,7 @@ keeper:
 | clickhouse.customConfig | object | `{}` | Custom ClickHouse configuration. This will be merged with the default configuration. |
 | clickhouse.database.name | string | `""` | Name of the default database to create during initialization |
 | clickhouse.env | list | `[]` | Custom environment variables for ClickHouse containers |
+| clickhouse.headlessService.annotations | object | `{}` | Annotations to add to the ClickHouse headless service |
 | clickhouse.image.repository | string | `"clickhouse/clickhouse-server"` | ClickHouse server image repository |
 | clickhouse.image.tag | string | `""` | ClickHouse server image tag (defaults to chart appVersion if empty) |
 | clickhouse.initdb.alwaysRun | bool | `false` | Always run initdb scripts even if database already exists |
@@ -329,17 +330,25 @@ keeper:
 | clickhouse.initdb.scripts | object | `{}` | Scripts to run during initialization |
 | clickhouse.logLevel | string | `"information"` | Logging level for ClickHouse. Valid values: none, fatal, critical, error, warning, notice, information, debug, trace. |
 | clickhouse.metrics.enabled | bool | `false` | Enable Prometheus metrics |
+| clickhouse.podAnnotations | object | `{}` | Additional annotations to add to ClickHouse pods |
 | clickhouse.podAntiAffinity.topologyKey | string | `"kubernetes.io/hostname"` | Topology key for pod anti-affinity |
 | clickhouse.podAntiAffinity.type | string | `"soft"` | Pod anti-affinity type: can be "soft" or "hard" |
 | clickhouse.podAntiAffinity.weight | int | `100` | Weight for soft pod anti-affinity (ignored if type is hard) |
 | clickhouse.podDisruptionBudget.enabled | bool | `true` | Enable PodDisruptionBudget for ClickHouse |
 | clickhouse.podDisruptionBudget.maxUnavailable | int | `1` | Maximum number of pods that can be unavailable |
+| clickhouse.podLabels | object | `{}` | Additional labels to add to ClickHouse pods |
 | clickhouse.replicasPerShard | int | `1` | Number of replicas per shard for high availability. Each replica contains the same data as others in the shard. |
 | clickhouse.securityContext | object | `{"fsGroup":101,"runAsGroup":101,"runAsUser":101}` | Security context for ClickHouse pods. UID 101 is the clickhouse user in the official Docker image. |
+| clickhouse.service.annotations | object | `{}` | Annotations to add to the ClickHouse service |
 | clickhouse.serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
 | clickhouse.serviceAccount.create | bool | `true` | Create a service account for ClickHouse |
 | clickhouse.serviceAccount.name | string | `""` | Name of the service account (if empty, generates based on fullname template) |
 | clickhouse.shards | int | `1` | Number of shards in the ClickHouse cluster. Each shard contains a subset of the data and processes queries independently. |
+| clickhouse.statefulSet.minReadySeconds | int | `0` | Minimum seconds a pod must be ready before being considered available |
+| clickhouse.statefulSet.podManagementPolicy | string | `"Parallel"` | Pod management policy for StatefulSet. OrderedReady: pods are created sequentially. Parallel: pods are created in parallel. |
+| clickhouse.statefulSet.revisionHistoryLimit | int | `10` | Number of old ReplicaSets to retain for rollback |
+| clickhouse.statefulSet.updateStrategy | object | `{"type":"RollingUpdate"}` | Update strategy for StatefulSet |
+| clickhouse.statefulSet.updateStrategy.type | string | `"RollingUpdate"` | Type of update strategy: RollingUpdate or OnDelete |
 
 ### Storage
 
@@ -365,20 +374,29 @@ keeper:
 | keeper.customConfig | object | `{}` | Custom Keeper configuration. This will be merged with the default configuration. |
 | keeper.enabled | bool | `false` | Enable ClickHouse Keeper for cluster coordination |
 | keeper.env | list | `[]` | Custom environment variables for Keeper containers |
+| keeper.headlessService.annotations | object | `{}` | Annotations to add to the Keeper headless service |
 | keeper.image.repository | string | `"clickhouse/clickhouse-keeper"` | ClickHouse Keeper image repository |
 | keeper.image.tag | string | `""` | ClickHouse Keeper image tag (defaults to chart appVersion if empty) |
 | keeper.logLevel | string | `"information"` | Logging level for Keeper. Valid values: none, fatal, critical, error, warning, notice, information, debug, trace. |
 | keeper.metrics.enabled | bool | `false` | Enable Prometheus metrics for Keeper |
+| keeper.metricsService.annotations | object | `{}` | Annotations to add to the Keeper metrics service |
+| keeper.podAnnotations | object | `{}` | Additional annotations to add to Keeper pods |
 | keeper.podAntiAffinity.topologyKey | string | `"kubernetes.io/hostname"` | Topology key for pod anti-affinity |
 | keeper.podAntiAffinity.type | string | `"soft"` | Pod anti-affinity type: can be "soft" or "hard" |
 | keeper.podAntiAffinity.weight | int | `100` | Weight for soft pod anti-affinity (ignored if type is hard) |
 | keeper.podDisruptionBudget.enabled | bool | `true` | Enable PodDisruptionBudget for Keeper |
 | keeper.podDisruptionBudget.maxUnavailable | int | `1` | Maximum number of pods that can be unavailable |
+| keeper.podLabels | object | `{}` | Additional labels to add to Keeper pods |
 | keeper.replicas | int | `3` | Number of Keeper replicas for high availability. Should be an odd number (typically 3 or 5) for consensus. |
 | keeper.securityContext | object | `{"fsGroup":101,"runAsGroup":101,"runAsUser":101}` | Security context for Keeper pods. UID 101 is the clickhouse user in the official Docker image. |
 | keeper.serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
 | keeper.serviceAccount.create | bool | `true` | Create a service account for ClickHouse |
 | keeper.serviceAccount.name | string | `""` | Name of the service account (if empty, generates based on fullname template) |
+| keeper.statefulSet.minReadySeconds | int | `0` | Minimum seconds a pod must be ready before being considered available |
+| keeper.statefulSet.podManagementPolicy | string | `"Parallel"` | Pod management policy for StatefulSet. OrderedReady: pods are created sequentially. Parallel: pods are created in parallel. |
+| keeper.statefulSet.revisionHistoryLimit | int | `10` | Number of old ReplicaSets to retain for rollback |
+| keeper.statefulSet.updateStrategy | object | `{"type":"RollingUpdate"}` | Update strategy for StatefulSet |
+| keeper.statefulSet.updateStrategy.type | string | `"RollingUpdate"` | Type of update strategy: RollingUpdate or OnDelete |
 
 ### Network Configuration
 

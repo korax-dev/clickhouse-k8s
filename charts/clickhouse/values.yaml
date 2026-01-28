@@ -68,8 +68,8 @@ clickhouse:
     # -- Create a secret for credentials (if false, secretName must reference an existing secret)
     # @section -- Authentication
     createSecret: true
-    # -- Name of the secret to create or use (auto-generated if empty)
-    # Existing secret must have keys: 'username' and 'password'
+    # -- Name of the secret to create or use (auto-generated if empty).
+    # Existing secret must have keys: 'username' and 'password'.
     # @section -- Authentication
     secretName: ""
     # -- Username (used when createSecret is true)
@@ -207,6 +207,7 @@ clickhouse:
     # @section -- ClickHouse Configuration
     updateStrategy:
       # -- Type of update strategy: RollingUpdate or OnDelete
+      # @section -- ClickHouse Configuration
       type: RollingUpdate
       # -- Partition for rolling update (pods with ordinal >= partition are updated)
       # partition: 0
@@ -275,8 +276,8 @@ clickhouse:
     # @section -- Authentication
     existingSecret: ""
 
-    # -- Key in the Secret that contains the user config (YAML or XML)
-    # Determines the filename under `/etc/clickhouse-server/users.d/`
+    # -- Key in the Secret that contains the user config (YAML or XML).
+    # Determines the filename under `/etc/clickhouse-server/users.d/`.
     # @section -- Authentication
     secretKey: "extra-users.yaml"
 
@@ -462,6 +463,7 @@ keeper:
     # @section -- Keeper Configuration
     updateStrategy:
       # -- Type of update strategy: RollingUpdate or OnDelete
+      # @section -- Keeper Configuration
       type: RollingUpdate
       # -- Partition for rolling update (pods with ordinal >= partition are updated)
       # partition: 0
