@@ -352,6 +352,8 @@ keeper:
       # @ignored
       nodeSelector: {}
       # @ignored
+      labels: {}
+      # @ignored
       affinity: {}
       # @ignored
       tolerations: []
