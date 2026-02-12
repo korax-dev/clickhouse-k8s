@@ -36,6 +36,10 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      terminationGracePeriodSeconds: {{ .Values.keeper.terminationGracePeriodSeconds }}
+      {{- with .Values.keeper.priorityClassName }}
+      priorityClassName: {{ . | quote }}
+      {{- end }}
       serviceAccountName: {{ include "clickhouse.keeperServiceAccountName" . }}
       {{- with .Values.keeper.securityContext }}
       securityContext:
@@ -74,6 +78,10 @@ spec:
               mountPath: /var/lib/clickhouse
           resources:
             {{- toYaml .Values.keeper.resources | nindent 12 }}
+          {{- with .Values.keeper.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.keeper.startupProbe }}
           startupProbe:
             {{- toYaml . | nindent 12 }}
@@ -100,6 +108,10 @@ spec:
       {{- end }}
       affinity:
         {{- include "clickhouse.keeperPodAntiAffinity" . | nindent 8 }}
+      {{- with .Values.keeper.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.keeper.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
