@@ -37,10 +37,17 @@ spec:
         {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/clickhouse-configmap.yaml") $ | sha256sum }}
+        {{- if and (not $.Values.clickhouse.initdb.existingSecret) $.Values.clickhouse.initdb.scripts }}
+        checksum/initdb: {{ include (print $.Template.BasePath "/clickhouse-initdb-secret.yaml") $ | sha256sum }}
+        {{- end }}
         {{- with $.Values.clickhouse.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      terminationGracePeriodSeconds: {{ $.Values.clickhouse.terminationGracePeriodSeconds }}
+      {{- with $.Values.clickhouse.priorityClassName }}
+      priorityClassName: {{ . | quote }}
+      {{- end }}
       serviceAccountName: {{ include "clickhouse.serviceAccountName" $ }}
       {{- with $.Values.clickhouse.securityContext }}
       securityContext:
@@ -151,6 +158,10 @@ spec:
             {{- end }}
           resources:
             {{- toYaml $.Values.clickhouse.resources | nindent 12 }}
+          {{- with $.Values.clickhouse.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with $.Values.clickhouse.startupProbe }}
           startupProbe:
             {{- toYaml . | nindent 12 }}
@@ -169,6 +180,10 @@ spec:
       {{- end }}
       affinity:
         {{- include "clickhouse.podAntiAffinity" (dict "context" $ "shard" $shard) | nindent 8 }}
+      {{- with $.Values.clickhouse.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with $.Values.clickhouse.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}

@@ -180,6 +180,20 @@ clickhouse:
   # @section -- ClickHouse Configuration
   affinity: {}
 
+  # -- Topology spread constraints for ClickHouse pods
+  # @section -- ClickHouse Configuration
+  topologySpreadConstraints: []
+    # - maxSkew: 1
+    #   topologyKey: topology.kubernetes.io/zone
+    #   whenUnsatisfiable: DoNotSchedule
+    #   labelSelector:
+    #     matchLabels:
+    #       app.kubernetes.io/component: clickhouse
+
+  # -- Priority class name for ClickHouse pods
+  # @section -- ClickHouse Configuration
+  priorityClassName: ""
+
   # PodDisruptionBudget configuration for ClickHouse
   podDisruptionBudget:
     # -- Enable PodDisruptionBudget for ClickHouse
@@ -211,6 +225,20 @@ clickhouse:
       type: RollingUpdate
       # -- Partition for rolling update (pods with ordinal >= partition are updated)
       # partition: 0
+
+  # -- Seconds Kubernetes waits for the pod to terminate gracefully before sending SIGKILL.
+  # @section -- ClickHouse Configuration
+  terminationGracePeriodSeconds: 30
+
+  # -- Lifecycle hooks for the ClickHouse container
+  # @section -- ClickHouse Configuration
+  lifecycle: {}
+    # preStop:
+    #   exec:
+    #     command:
+    #       - bash
+    #       - -c
+    #       - "clickhouse-client --query 'SYSTEM STOP MERGES' && sleep 10"
 
   # @ignored
   startupProbe: {}
@@ -436,6 +464,20 @@ keeper:
   # @section -- Keeper Configuration
   affinity: {}
 
+  # -- Topology spread constraints for Keeper pods
+  # @section -- Keeper Configuration
+  topologySpreadConstraints: []
+    # - maxSkew: 1
+    #   topologyKey: topology.kubernetes.io/zone
+    #   whenUnsatisfiable: DoNotSchedule
+    #   labelSelector:
+    #     matchLabels:
+    #       app.kubernetes.io/component: keeper
+
+  # -- Priority class name for Keeper pods
+  # @section -- Keeper Configuration
+  priorityClassName: ""
+
   # PodDisruptionBudget configuration for Keeper
   podDisruptionBudget:
     # -- Enable PodDisruptionBudget for Keeper
@@ -467,6 +509,20 @@ keeper:
       type: RollingUpdate
       # -- Partition for rolling update (pods with ordinal >= partition are updated)
       # partition: 0
+
+  # -- Seconds Kubernetes waits for the pod to terminate gracefully before sending SIGKILL.
+  # @section -- Keeper Configuration
+  terminationGracePeriodSeconds: 30
+
+  # -- Lifecycle hooks for the Keeper container
+  # @section -- Keeper Configuration
+  lifecycle: {}
+    # preStop:
+    #   exec:
+    #     command:
+    #       - bash
+    #       - -c
+    #       - "sleep 5"
 
   # @ignored
   startupProbe: {}
