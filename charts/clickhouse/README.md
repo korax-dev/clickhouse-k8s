@@ -2,7 +2,7 @@
 
 A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
 
-![Version: 0.4.2](https://img.shields.io/badge/Version-0.4.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 26.1.2-alpine](https://img.shields.io/badge/AppVersion-26.1.2--alpine-informational?style=flat-square)
+![Version: 0.4.3](https://img.shields.io/badge/Version-0.4.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 26.1.2-alpine](https://img.shields.io/badge/AppVersion-26.1.2--alpine-informational?style=flat-square)
 
 ## Features
 
@@ -328,6 +328,7 @@ keeper:
 | clickhouse.initdb.alwaysRun | bool | `false` | Always run initdb scripts even if database already exists |
 | clickhouse.initdb.existingSecret | string | `""` | Name of an existing secret containing initialization scripts |
 | clickhouse.initdb.scripts | object | `{}` | Scripts to run during initialization |
+| clickhouse.lifecycle | object | `{}` | Lifecycle hooks for the ClickHouse container |
 | clickhouse.logLevel | string | `"information"` | Logging level for ClickHouse. Valid values: none, fatal, critical, error, warning, notice, information, debug, trace. |
 | clickhouse.metrics.enabled | bool | `false` | Enable Prometheus metrics |
 | clickhouse.podAnnotations | object | `{}` | Additional annotations to add to ClickHouse pods |
@@ -337,6 +338,7 @@ keeper:
 | clickhouse.podDisruptionBudget.enabled | bool | `true` | Enable PodDisruptionBudget for ClickHouse |
 | clickhouse.podDisruptionBudget.maxUnavailable | int | `1` | Maximum number of pods that can be unavailable |
 | clickhouse.podLabels | object | `{}` | Additional labels to add to ClickHouse pods |
+| clickhouse.priorityClassName | string | `""` | Priority class name for ClickHouse pods |
 | clickhouse.replicasPerShard | int | `1` | Number of replicas per shard for high availability. Each replica contains the same data as others in the shard. |
 | clickhouse.securityContext | object | `{"fsGroup":101,"runAsGroup":101,"runAsUser":101}` | Security context for ClickHouse pods. UID 101 is the clickhouse user in the official Docker image. |
 | clickhouse.service.annotations | object | `{}` | Annotations to add to the ClickHouse service |
@@ -349,6 +351,8 @@ keeper:
 | clickhouse.statefulSet.revisionHistoryLimit | int | `10` | Number of old ReplicaSets to retain for rollback |
 | clickhouse.statefulSet.updateStrategy | object | `{"type":"RollingUpdate"}` | Update strategy for StatefulSet |
 | clickhouse.statefulSet.updateStrategy.type | string | `"RollingUpdate"` | Type of update strategy: RollingUpdate or OnDelete |
+| clickhouse.terminationGracePeriodSeconds | int | `30` | Seconds Kubernetes waits for the pod to terminate gracefully before sending SIGKILL. |
+| clickhouse.topologySpreadConstraints | list | `[]` | Topology spread constraints for ClickHouse pods |
 
 ### Storage
 
@@ -377,6 +381,7 @@ keeper:
 | keeper.headlessService.annotations | object | `{}` | Annotations to add to the Keeper headless service |
 | keeper.image.repository | string | `"clickhouse/clickhouse-keeper"` | ClickHouse Keeper image repository |
 | keeper.image.tag | string | `""` | ClickHouse Keeper image tag (defaults to chart appVersion if empty) |
+| keeper.lifecycle | object | `{}` | Lifecycle hooks for the Keeper container |
 | keeper.logLevel | string | `"information"` | Logging level for Keeper. Valid values: none, fatal, critical, error, warning, notice, information, debug, trace. |
 | keeper.metrics.enabled | bool | `false` | Enable Prometheus metrics for Keeper |
 | keeper.metricsService.annotations | object | `{}` | Annotations to add to the Keeper metrics service |
@@ -387,6 +392,7 @@ keeper:
 | keeper.podDisruptionBudget.enabled | bool | `true` | Enable PodDisruptionBudget for Keeper |
 | keeper.podDisruptionBudget.maxUnavailable | int | `1` | Maximum number of pods that can be unavailable |
 | keeper.podLabels | object | `{}` | Additional labels to add to Keeper pods |
+| keeper.priorityClassName | string | `""` | Priority class name for Keeper pods |
 | keeper.replicas | int | `3` | Number of Keeper replicas for high availability. Should be an odd number (typically 3 or 5) for consensus. |
 | keeper.securityContext | object | `{"fsGroup":101,"runAsGroup":101,"runAsUser":101}` | Security context for Keeper pods. UID 101 is the clickhouse user in the official Docker image. |
 | keeper.serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
@@ -397,6 +403,8 @@ keeper:
 | keeper.statefulSet.revisionHistoryLimit | int | `10` | Number of old ReplicaSets to retain for rollback |
 | keeper.statefulSet.updateStrategy | object | `{"type":"RollingUpdate"}` | Update strategy for StatefulSet |
 | keeper.statefulSet.updateStrategy.type | string | `"RollingUpdate"` | Type of update strategy: RollingUpdate or OnDelete |
+| keeper.terminationGracePeriodSeconds | int | `30` | Seconds Kubernetes waits for the pod to terminate gracefully before sending SIGKILL. |
+| keeper.topologySpreadConstraints | list | `[]` | Topology spread constraints for Keeper pods |
 
 ### Network Configuration
 
