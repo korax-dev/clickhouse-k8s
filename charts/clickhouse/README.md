@@ -328,6 +328,7 @@ keeper:
 | clickhouse.initdb.alwaysRun | bool | `false` | Always run initdb scripts even if database already exists |
 | clickhouse.initdb.existingSecret | string | `""` | Name of an existing secret containing initialization scripts |
 | clickhouse.initdb.scripts | object | `{}` | Scripts to run during initialization |
+| clickhouse.internalReplication | bool | `false` | Whether to write data to just one of the replicas. Default: false (write data to all replicas). Ref: https://clickhouse.com/docs/engines/table-engines/special/distributed#distributed-writing-data |
 | clickhouse.lifecycle | object | `{}` | Lifecycle hooks for the ClickHouse container |
 | clickhouse.logLevel | string | `"information"` | Logging level for ClickHouse. Valid values: none, fatal, critical, error, warning, notice, information, debug, trace. |
 | clickhouse.metrics.enabled | bool | `false` | Enable Prometheus metrics |
