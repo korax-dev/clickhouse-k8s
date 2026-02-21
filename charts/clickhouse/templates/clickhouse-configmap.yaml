@@ -41,7 +41,8 @@ data:
       {{ .Values.clickhouse.clusterName }}:
         shard:
           {{- range $shard := until (int .Values.clickhouse.shards) }}
-          - replica:
+          - internal_replication: {{ $.Values.clickhouse.internalReplication }}
+            replica:
               {{- range $replica := until (int $.Values.clickhouse.replicasPerShard) }}
               - host: {{ include "clickhouse.fullname" $ }}-shard{{ $shard }}-{{ $replica }}.{{ include "clickhouse.fullname" $ }}-headless
                 port: {{ $.Values.ports.clickhouse.tcp }}

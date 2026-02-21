@@ -10,6 +10,11 @@ clickhouse:
   # @section -- ClickHouse Configuration
   replicasPerShard: 1
 
+  # -- Whether to write data to just one of the replicas. Default: false (write data to all replicas).
+  # Ref: https://clickhouse.com/docs/engines/table-engines/special/distributed#distributed-writing-data
+  # @section -- ClickHouse Configuration
+  internalReplication: false
+
   # -- Name of the ClickHouse cluster
   # @section -- ClickHouse Configuration
   clusterName: default
