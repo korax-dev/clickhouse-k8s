@@ -1,9 +1,25 @@
 clickhouse:
   replicasPerShard: 3
+
+  auth:
+    enabled: true
+    password: auth-test
+
+  interserverCredentials:
+    enabled: true
+    password: interserver-test
+
+  distributedQuerySecret:
+    enabled: true
+    secret: distributed-test
+
   persistentVolume:
     enabled: false
 
 keeper:
   enabled: true
+  auth:
+    enabled: true
+    password: keeper-test
   persistentVolume:
     enabled: false
