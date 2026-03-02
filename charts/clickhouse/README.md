@@ -156,7 +156,7 @@ clickhouse:
 
 ### Interserver Authentication
 
-Secure communication between ClickHouse nodes in a cluster.
+Secure communication between ClickHouse replicas.
 
 ```yaml
 clickhouse:
@@ -170,6 +170,26 @@ clickhouse:
     # Option 2: Existing secret
     createSecret: false
     secretName: "clickhouse-interserver-auth" # Must contain keys: username, password
+```
+
+### Distributed Query Secret
+
+Secure Distributed table queries between ClickHouse cluster nodes.
+
+This feature configures a per-cluster shared secret used to validate Distributed queries executed across shards.
+
+```yaml
+clickhouse:
+  distributedQuerySecret:
+    enabled: true
+
+    # Option 1: Chart-created secret
+    createSecret: true
+    secret: "my-distributed-query-secret"
+
+    # Option 2: Existing secret
+    createSecret: false
+    secretName: "clickhouse-distributed-secret" # Must contain key: secret
 ```
 
 ### Keeper Authentication
@@ -301,8 +321,12 @@ keeper:
 | clickhouse.auth.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty). Existing secret must have keys: 'username' and 'password'. |
 | clickhouse.auth.skipUserSetup | bool | `false` | Set to true to skip automatic user setup, allowing the insecure 'default' user to be available. |
 | clickhouse.auth.username | string | `"default"` | Username (used when createSecret is true) |
+| clickhouse.distributedQuerySecret.createSecret | bool | `true` | Create a secret (if false, secretName must reference an existing secret) |
+| clickhouse.distributedQuerySecret.enabled | bool | `false` | Enable per-cluster Distributed query secret |
+| clickhouse.distributedQuerySecret.secret | string | `""` | Distributed query secret value (used when createSecret is true) |
+| clickhouse.distributedQuerySecret.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty). Existing secret must have key: 'secret' |
 | clickhouse.interserverCredentials.createSecret | bool | `true` | Create a secret for credentials (if false, secretName must reference an existing secret) |
-| clickhouse.interserverCredentials.enabled | bool | `false` | Enable authentication between ClickHouse servers |
+| clickhouse.interserverCredentials.enabled | bool | `false` | Enable authentication between ClickHouse replicas |
 | clickhouse.interserverCredentials.password | string | `""` | Password (used when createSecret is true) |
 | clickhouse.interserverCredentials.secretName | string | `""` | Name of the secret to create or use (auto-generated if empty). Existing secret must have keys: 'username' and 'password'. |
 | clickhouse.interserverCredentials.username | string | `"interserver"` | Username (used when createSecret is true) |

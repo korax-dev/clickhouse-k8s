@@ -118,6 +118,17 @@ ClickHouse Interserver Credentials Secret name
 {{- end }}
 
 {{/*
+ClickHouse distributed query Secret name
+*/}}
+{{- define "clickhouse.distributedQuerySecretName" -}}
+{{- if .Values.clickhouse.distributedQuerySecret.secretName }}
+{{- .Values.clickhouse.distributedQuerySecret.secretName }}
+{{- else }}
+{{- printf "%s-distributed-secret" (include "clickhouse.fullname" .) }}
+{{- end }}
+{{- end }}
+
+{{/*
 ClickHouse Init DB Secret name
 */}}
 {{- define "clickhouse.initdbSecretName" -}}

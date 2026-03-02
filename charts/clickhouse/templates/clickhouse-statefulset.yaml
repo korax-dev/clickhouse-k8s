@@ -101,6 +101,13 @@ spec:
                   name: {{ include "clickhouse.interserverSecretName" $ }}
                   key: password
             {{- end }}
+            {{- if $.Values.clickhouse.distributedQuerySecret.enabled }}
+            - name: CLICKHOUSE_DISTRIBUTED_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.distributedQuerySecretName" $ }}
+                  key: secret
+            {{- end }}
             {{- if $.Values.clickhouse.database.name }}
             - name: CLICKHOUSE_DB
               value: {{ $.Values.clickhouse.database.name | quote }}

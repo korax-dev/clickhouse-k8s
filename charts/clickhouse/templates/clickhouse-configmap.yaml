@@ -39,6 +39,10 @@ data:
 
     remote_servers:
       {{ .Values.clickhouse.clusterName }}:
+        {{- if .Values.clickhouse.distributedQuerySecret.enabled }}
+        secret:
+          '@from_env': CLICKHOUSE_DISTRIBUTED_SECRET
+        {{- end }}
         shard:
           {{- range $shard := until (int .Values.clickhouse.shards) }}
           - internal_replication: {{ $.Values.clickhouse.internalReplication }}
