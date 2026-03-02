@@ -67,7 +67,7 @@ clickhouse:
 
   # Interserver communication credentials
   interserverCredentials:
-    # -- Enable authentication between ClickHouse servers
+    # -- Enable authentication between ClickHouse replicas
     # @section -- Authentication
     enabled: false
     # -- Create a secret for credentials (if false, secretName must reference an existing secret)
@@ -83,6 +83,25 @@ clickhouse:
     # -- Password (used when createSecret is true)
     # @section -- Authentication
     password: ""
+
+  # Distributed query authentication
+  distributedQuerySecret:
+    # -- Enable per-cluster Distributed query secret
+    # @section -- Authentication
+    enabled: false
+
+    # -- Create a secret (if false, secretName must reference an existing secret)
+    # @section -- Authentication
+    createSecret: true
+
+    # -- Name of the secret to create or use (auto-generated if empty).
+    # Existing secret must have key: 'secret'
+    # @section -- Authentication
+    secretName: ""
+
+    # -- Distributed query secret value (used when createSecret is true)
+    # @section -- Authentication
+    secret: ""
 
   # Database configuration
   database:

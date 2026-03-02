@@ -65,6 +65,12 @@ To retrieve the authentication credentials, use the following commands:
    kubectl get secret --namespace {{ .Release.Namespace }} {{ include "clickhouse.interserverSecretName" . }} -o jsonpath="{.data.password}" | base64 --decode
 {{- end }}
 
+{{- if .Values.clickhouse.distributedQuerySecret.enabled }}
+
+- ClickHouse Distributed Query Secret:
+   kubectl get secret --namespace {{ .Release.Namespace }} {{ include "clickhouse.distributedQuerySecretName" . }} -o jsonpath="{.data.secret}" | base64 --decode
+{{- end }}
+
 {{- if and .Values.keeper.enabled .Values.keeper.auth.enabled }}
 
 - ClickHouse Keeper Credentials:

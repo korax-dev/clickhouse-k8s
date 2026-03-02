@@ -156,7 +156,7 @@ clickhouse:
 
 ### Interserver Authentication
 
-Secure communication between ClickHouse nodes in a cluster.
+Secure communication between ClickHouse replicas.
 
 ```yaml
 clickhouse:
@@ -170,6 +170,26 @@ clickhouse:
     # Option 2: Existing secret
     createSecret: false
     secretName: "clickhouse-interserver-auth" # Must contain keys: username, password
+```
+
+### Distributed Query Secret
+
+Secure Distributed table queries between ClickHouse cluster nodes.
+
+This feature configures a per-cluster shared secret used to validate Distributed queries executed across shards.
+
+```yaml
+clickhouse:
+  distributedQuerySecret:
+    enabled: true
+
+    # Option 1: Chart-created secret
+    createSecret: true
+    secret: "my-distributed-query-secret"
+
+    # Option 2: Existing secret
+    createSecret: false
+    secretName: "clickhouse-distributed-secret" # Must contain key: secret
 ```
 
 ### Keeper Authentication
