@@ -12,6 +12,7 @@ A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
 - **ClickHouse Keeper**: Built-in coordination service as a ZooKeeper replacement
 - **Customization**: Flexible configuration options and initialization scripts
 - **Metrics**: Optional Prometheus metrics integration
+- **Backups**: Configurable support for using the [clickhouse-backup](https://github.com/altinity/clickhouse-backup) tool
 
 ## Storage Configuration
 
@@ -305,6 +306,66 @@ keeper:
     size: 5Gi
 ```
 
+## Backup Options
+
+The cluster can optionally be configured to use the [clickhouse-backup](https://github.com/altinity/clickhouse-backup) tool to
+enable full and incremental backups to a variety of possible storage backends.
+
+There are a few moving parts in play here:
+
+- when backups are enabled, each pod in the cluster gains a sidecar container running the clickhouse-backup tool in daemon mode
+- the daemon's configuration is kept in `/etc/clickhouse-backups/config.yml` -- this is either created directly from content
+  provided in the helm values, or from a pre-provisioned kubernetes secret
+- the backup daemon watches the `system.backup\_actions` table and acts on what it finds there
+- a kubenetes CronJob (based on the one found in the [clickhouse-backup documentation](https://github.com/Altinity/clickhouse-backup/blob/master/Examples.md#simple-cron-script-for-daily-backups-and-remote-upload), on a schedule you determine, runs an [initator script](sources/backup.sh) that injects rows into the `system.backup_actions` table to trigger backups by the sidecar container
+
+### Backup configuration example:
+
+```
+clickhouse:
+  backup:
+    enabled: true
+    create_incremental_backups: true
+    full_backup_weekday: 1
+    auth:
+      username: default
+      password: "defaultpassword"
+    schedule: "0 9 * * *"
+    config:
+      content: |
+         general:
+           remote_storage: gcs
+           disable_progress_bar: true
+           allow_empty_backups: true
+           use_resumable_state: true
+           allow_object_disk_streaming: true
+           backups_to_keep_local: -1
+           backups_to_keep_remote: 7
+         clickhouse:
+           log_sql_queries: false
+           check_parts_columns: false
+           restart_command: sql:SYSTEM RELOAD USERS; sql:SYSTEM RELOAD CONFIG
+           disk_mapping:
+             default: /var/lib/clickhouse
+           skip_tables:
+           - system.*
+           - INFORMATION_SCHEMA.*
+           - information_schema.*
+           - _temporary_and_external_tables.*
+           timeout: 30m
+           check_replicas_before_attach: true
+         api:
+           listen: 0.0.0.0:7171
+           enable_metrics: true
+           enable_pprof: true
+           create_integration_tables: true
+         gcs:
+           bucket: my_backup_bucket
+           path: clickhouse-backups
+           compression_level: 1
+           compression_format: gzip
+```
+
 ## Values
 
 ### Authentication
@@ -445,3 +506,27 @@ keeper:
 | ports.keeper.httpControl | int | `9182` | HTTP control interface port for health checks |
 | ports.keeper.metrics | int | `9363` | Prometheus metrics port |
 | ports.keeper.raft | int | `9234` | Raft protocol port for Keeper consensus |
+
+### Backup Configuration
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| clickhouse.backup.auth.password | string | `""` | password with which the backup cronjob authenticates to clickhouse |
+| clickhouse.backup.auth.username | string | `default` | username with which the backup cronjob authenticates to clickhouse |
+| clickhouse.backup.config.content | string | `""` | if not using an existing secret, this is used as the content of `/etc/clickhouse-backup/config.yml` |
+| clickhouse.backup.config.existingSecret | string | `""` | if set, use this k8s secret as the source for the config.yml file used by the backup daemon |
+| clickhouse.backup.config.secretKey | string | `"config.yml"` | if using existingSecret, this is the key name inside the secret to mount as the config file |
+| clickhouse.backup.create_incremental_backups | bool | `true` | Back up only parts changed/created since the last full backup |
+| clickhouse.backup.cronjob.image.pullPolicy | string | `"IfNotPresent"` | PullPolicy for the backup initiator cronjob container image |
+| clickhouse.backup.cronjob.image.repository | string | `clickhouse/clickhouse-server` | Docker image to run in the backup initiator cronjob |
+| clickhouse.backup.cronjob.image.tag | string | `""` | Docker tag to run in the backup initiator cronjob (if left unset, defaults to chart appVersion) |
+| clickhouse.backup.delete_local_backups | bool | `false` | Manually delete local backups after the upload step: this may be redundant depending on how you configured `general.backups_to_keep_local` in the clickhouse-backup config.yml |
+| clickhouse.backup.enabled | bool | `false` | Enable backups using clickhouse-backup |
+| clickhouse.backup.full_backup_weekday | int | `1` | Which day of the week (1-7) to perform a full backup if incremental backup are activated |
+| clickhouse.backup.image.pullPolicy | string | `"IfNotPresent"` | PullPolicy for the backup sidecar container image |
+| clickhouse.backup.image.repository | string | `altinity/clickhouse-backup` | Docker image to run in the backup sidecar container |
+| clickhouse.backup.image.tag | string | `"stable"` | Docker tag to run in the backup sidecar container |
+| clickhouse.backup.schedule | string | `"0 7 * * *"` | cron schedule specification |
+| clickhouse.backup.script.command | string | `"bash /clickhouse-backup-scripts/backup.sh"` | command executed by the initiator cronjob (note that this is passed to `sh -c` in the cronjob pod spec) |
+| clickhouse.backup.script.configMapKey | string | `"backup.sh"` | if using a pre-existing configmap for the script run by the initiator cronjob, this specifies the key in the map |
+| clickhouse.backup.script.existingConfigMap | string | `""` | name of an existing configmap from which to mount the backup.sh script run by the initator cronjob; if left empty, the [default script](sources/backup.sh) is used |

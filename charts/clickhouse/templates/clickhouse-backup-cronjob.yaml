@@ -1,0 +1,75 @@
+{{- $services := list }}
+{{- $fullname := include "clickhouse.fullname" $ }}
+{{- range $shard := until (int .Values.clickhouse.shards) }}
+  {{- $shardName := printf "%s-shard%d-0.%s-headless" $fullname $shard $fullname }}
+  {{- $services = append $services $shardName }}
+{{- end }}
+{{- $serviceList := join "," $services }}
+{{- $clickhousePort := .Values.ports.clickhouse.tcp }}
+
+{{- with $.Values.clickhouse.backup }}
+{{- if .enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $fullname }}-backup-cron
+spec:
+  # every day at 00:00
+  schedule: {{ .cronjob.schedule | quote }}
+  concurrencyPolicy: "Forbid"
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          labels:
+            app: "{{ $fullname }}-backup-cron"
+          {{- if .cronjob.labels }}
+            {{ .cronjob.labels | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if .cronjob.annotations }}
+          annotations:
+            {{ .cronjob.annotations | toYaml | nindent 12 }}
+          {{- end }}
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: run-backup-cron
+              image: "{{ .cronjob.image.repository | default $.Values.clickhouse.image.repository }}:{{ .cronjob.image.tag | default $.Chart.AppVersion }}"
+              imagePullPolicy: {{ .cronjob.image.pullPolicy | default "IfNotPresent" }}
+              env:
+                # use first replica in each shard, use `kubectl get svc | grep test-backups`
+                - name: CLICKHOUSE_SERVICES
+                  value: {{ $serviceList }}
+                - name: CLICKHOUSE_PORT
+                  value: {{ $clickhousePort | quote }}
+                - name: BACKUP_USER
+                  value: {{ .auth.username | default "default" | quote }}
+                - name: BACKUP_PASSWORD
+                  value: {{ .auth.password | default "" | quote }}
+                # change to 1, if you want to make full backup only in $FULL_BACKUP_WEEKDAY (1 - Mon, 7 - Sun)
+                - name: INCREMENTAL_BACKUP
+                  value: {{ .create_incremental_backups | quote}}
+                - name: FULL_BACKUP_WEEKDAY
+                  value: {{ .full_backup_weekday | default 1 | quote }}
+                - name: DELETE_LOCAL_BACKUPS
+                  value: {{ $.delete_local_backups | default false | quote}}
+              command:
+                - /bin/sh
+                - -c
+                - {{ .script.command | quote }}
+              volumeMounts:
+                - mountPath: /clickhouse-backup-scripts
+                  name: backup-scripts
+          volumes:
+            - name: backup-scripts
+              configMap:
+                {{- if .script.existingConfigMap }}
+                name: {{ .script.existingConfigMap }}
+                {{- else }}
+                name: {{ $fullname }}-backup-scripts
+                {{- end }}
+{{- end }}
+{{- end }}
