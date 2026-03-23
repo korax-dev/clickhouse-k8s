@@ -23,3 +23,4 @@ For more detailed information on configuration options and usage, please refer t
 
 - [ClickHouse Docs](https://clickhouse.com/docs/intro)
 - [ClickHouse Server Docker Image](https://hub.docker.com/r/clickhouse/clickhouse-server/)
+- [Clickhouse Backup Utility](https://github.com/altinity/clickhouse-backup)
