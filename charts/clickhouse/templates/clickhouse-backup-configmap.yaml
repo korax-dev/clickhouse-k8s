@@ -1,12 +1,43 @@
-{{- if and .Values.clickhouse.backup.enabled (not $.Values.clickhouse.backup.script.existingConfigMap) }}
+{{- $fullname := include "clickhouse.fullname" $ }}
+{{- $labels := include "clickhouse.labels" $ }}
+{{- with $.Values.clickhouse.backup }}
+{{- if .enabled }}
+
+{{- if not .config.existingConfigMap }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "clickhouse.fullname" $ }}-backup-scripts
+  name: {{ $fullname }}-backup-config
   labels:
-    {{- include "clickhouse.labels" . | nindent 4 }}
-    app.kubernetes.io/component: clickhouse
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: clickhouse-backup
+data:
+  config.yml: |
+{{- if .config.content }}
+    {{- .config.content | nindent 4 }}
+{{- else }}
+    {{- $.Files.Get "sources/config.yml" | nindent 4 }}
+{{- end }}
+{{- end }}
+
+{{- if not .cronjob.script.existingConfigMap }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-backup-initiator
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: clickhouse-backup
 data:
   backup.sh: |
-{{ .Files.Get "sources/backup.sh" | indent 4 }}
+{{- if .cronjob.script.content }}
+  {{- .cronjob.script.content | nindent 4 }}
+{{- else }}
+  {{- $.Files.Get "sources/backup.sh" | nindent 4 }}
+{{- end }}
+{{- end }}
+
+{{- end }}
 {{- end }}

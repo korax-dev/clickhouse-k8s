@@ -53,56 +53,6 @@ spec:
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with $.Values.clickhouse.backup }}
-      {{- if .enabled }}
-      initContainers:
-        - name: backup
-          image: {{ .image.repository }}:{{ .image.tag | default "latest" }}
-          imagePullPolicy: {{ .image.pullPolicy }}
-          restartPolicy: Always # https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/
-          command:
-            - "/bin/bash"
-            - "-c"
-            {{- if .config.existingSecret }}
-            - '/bin/clickhouse-backup -c /etc/clickhouse-backup/{{ .config.secretKey | default "config.yml" }} server'
-            {{- else }}
-            - "/bin/clickhouse-backup -c /etc/clickhouse-backup/config.yml server"
-            {{- end }}
-          env:
-            # pinning these in case cluster vars are doing anything weird
-            - name: CLICKHOUSE_HOST
-              value: 127.0.0.1
-            - name: CLICKHOUSE_PORT
-              value: "{{ $.Values.ports.clickhouse.tcp }}"
-          ports:
-            - containerPort: 7171
-              name: backup
-              protocol: TCP
-          resources: {}
-          securityContext:
-            capabilities:
-              add:
-                - SYS_NICE
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
-          volumeMounts:
-            - mountPath: /etc/clickhouse-backup
-              name: backup-config
-            - name: data
-              mountPath: /var/lib/clickhouse
-            - name: config
-              mountPath: /etc/clickhouse-server/config.d
-            {{- if or $.Values.clickhouse.additionalUsers.content $.Values.clickhouse.additionalUsers.existingSecret }}
-            - name: usersd
-              mountPath: /etc/clickhouse-server/users.d/{{ $.Values.clickhouse.additionalUsers.secretKey }}
-              subPath: {{ $.Values.clickhouse.additionalUsers.secretKey }}
-            {{- end }}
-            {{- if or $.Values.clickhouse.initdb.scripts $.Values.clickhouse.initdb.existingSecret }}
-            - name: initdb
-              mountPath: /docker-entrypoint-initdb.d
-            {{- end }}
-        {{- end }}
-      {{- end }}
       containers:
         - name: clickhouse
           image: "{{ $.Values.clickhouse.image.repository }}:{{ $.Values.clickhouse.image.tag | default $.Chart.AppVersion }}"
@@ -231,6 +181,70 @@ spec:
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+      {{- with $.Values.clickhouse.backup }}
+      {{- if .enabled }}
+        - name: backup
+          image: {{ .image.repository | default "altinity/clickhouse-backup" }}:{{ .image.tag | default "latest" }}
+          imagePullPolicy: {{ .image.pullPolicy | default "IfNotPresent" }}
+          args:
+            - -c
+            {{- if .config.existingConfigMap }}
+            - '/etc/clickhouse-backup/{{ .config.fileName | default "config.yml" }}'
+            {{- else }}
+            - "/etc/clickhouse-backup/config.yml"
+            {{- end }}
+            - server
+          env:
+            # pinning host and port in case cluster vars are doing anything weird
+            - name: CLICKHOUSE_HOST
+              value: 127.0.0.1
+            - name: CLICKHOUSE_PORT
+              value: "{{ $.Values.ports.clickhouse.tcp }}"
+            {{- if or $.Values.clickhouse.backup.auth.enabled $.Values.clickhouse.auth.enabled }}
+            - name: CLICKHOUSE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.backup.secretName" $ }}
+                  key: username
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.backup.secretName" $ }}
+                  key: password
+            {{- else }}
+            - name: CLICKHOUSE_USERNAME
+              value: "default"
+            - name: CLICKHOUSE_PASSWORD
+              value: ""
+            {{- end }}
+            {{- if .env }}
+            {{- toYaml .env | nindent 12 }}
+            {{- end }}
+          ports:
+            - containerPort: 7171
+              name: backup
+              protocol: TCP
+          resources: {}
+          {{- if .securityContext }}
+          securityContext:
+            {{- toYaml .securityContext | nindent 12 }}
+          {{- end }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /etc/clickhouse-backup
+              name: backup-config
+            - name: data
+              mountPath: /var/lib/clickhouse
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d
+            {{- if or $.Values.clickhouse.additionalUsers.content $.Values.clickhouse.additionalUsers.existingSecret }}
+            - name: usersd
+              mountPath: /etc/clickhouse-server/users.d/{{ $.Values.clickhouse.additionalUsers.secretKey }}
+              subPath: {{ $.Values.clickhouse.additionalUsers.secretKey }}
+            {{- end }}
+        {{- end }}
+      {{- end }}
       {{- with $.Values.clickhouse.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -266,12 +280,12 @@ spec:
         {{- with $.Values.clickhouse.backup }}
         {{- if .enabled }}
         - name: backup-config
-          secret:
-        {{- if .config.existingSecret }}
-            secretName: {{ $.Values.clickhouse.backup.existingSecret }}
-        {{- else }}
-            secretName: {{ include "clickhouse.fullname" $ }}-backup-config
-        {{- end }}
+          configMap:
+            {{- if .config.existingConfigMap }}
+            name: {{ .config.existingConfigMap }}
+            {{- else }}
+            name: {{ include "clickhouse.fullname" $ }}-backup-config
+            {{- end }}
         {{- end }}
         {{- end }}
   {{- if $.Values.clickhouse.persistentVolume.enabled }}

@@ -1,0 +1,282 @@
+#
+# WARNING WARNING WARNING
+#
+# This is the _default_ configuration file. Without further configuration, this will only
+# (if you're lucky) produce local backups. The upload and download commands will not function
+# unless you configure a remote storage backend. In general we recommend leaving this file
+# alone and performing your site configuration by setting the relevant environment variables
+# in .Values.clickhouse.backup.env -- all clickhouse-backup config directives can be overridden
+# from the environment.
+#
+general:
+  remote_storage: none           # REMOTE_STORAGE, choice from: `azblob`,`gcs`,`s3`, etc; if `none` then `upload` and `download` commands will fail.
+  max_file_size: 1073741824      # MAX_FILE_SIZE, 1G by default, useless when upload_by_part is true, use to split data parts files by archives
+  backups_to_keep_local: 0       # BACKUPS_TO_KEEP_LOCAL, how many latest local backup should be kept, 0 means all created backups will be stored on local disk
+                                 # -1 means backup will keep after `create` but will delete after `create_remote` command
+                                 # You can run `clickhouse-backup delete local <backup_name>` command to remove temporary backup files from the local disk
+  backups_to_keep_remote: 0      # BACKUPS_TO_KEEP_REMOTE, how many latest backup should be kept on remote storage, 0 means all uploaded backups will be stored on remote storage.
+                                 # If old backups are required for newer incremental backup then it won't be deleted. Be careful with long incremental backup sequences.
+  log_level: info                # LOG_LEVEL, a choice from `debug`, `info`, `warning`, `error`
+  allow_empty_backups: false     # ALLOW_EMPTY_BACKUPS
+  # Concurrency means parallel tables and parallel parts inside tables
+  # For example, 4 means max 4 parallel tables and 4 parallel parts inside one table, so equals 16 concurrent streams
+  download_concurrency: 1        # DOWNLOAD_CONCURRENCY, max 255, by default, the value is round(sqrt(AVAILABLE_CPU_CORES / 2))
+  upload_concurrency: 1          # UPLOAD_CONCURRENCY, max 255, by default, the value is round(sqrt(AVAILABLE_CPU_CORES / 2))
+
+  # Throttling speed for upload and download, calculates on part level, not the socket level, it means short period for high traffic values and then time to sleep 
+  download_max_bytes_per_second: 0  # DOWNLOAD_MAX_BYTES_PER_SECOND, 0 means no throttling 
+  upload_max_bytes_per_second: 0    # UPLOAD_MAX_BYTES_PER_SECOND, 0 means no throttling
+
+  # when table data contains in system.disks with type=ObjectStorage, then we need execute remote copy object in object storage service provider, this parameter can restrict how many files will copied in parallel  for each table 
+  object_disk_server_side_copy_concurrency: 32
+  # when CopyObject failure or object disk storage and backup destination have incompatible, will warning about possible high network traffic 
+  allow_object_disk_streaming: false
+
+  # RESTORE_SCHEMA_ON_CLUSTER, execute all schema related SQL queries with `ON CLUSTER` clause as Distributed DDL.
+  # Check `system.clusters` table for the correct cluster name, also `system.macros` can be used.
+  # This isn't applicable when `use_embedded_backup_restore: true`
+  restore_schema_on_cluster: ""
+  upload_by_part: true           # UPLOAD_BY_PART
+  download_by_part: true         # DOWNLOAD_BY_PART
+  use_resumable_state: true      # USE_RESUMABLE_STATE, allow resume upload and download according to the <backup_name>.resumable file. Resumable state is not supported for custom method in remote storage.
+
+  # RESTORE_DATABASE_MAPPING, restore rules from backup databases to target databases, which is useful when changing destination database, all atomic tables will be created with new UUIDs.
+  # The format for this env variable is "src_db1:target_db1,src_db2:target_db2". For YAML please continue using map syntax
+  restore_database_mapping: {}
+
+  # RESTORE_TABLE_MAPPING, restore rules from backup tables to target tables, which is useful when changing destination tables.
+  # The format for this env variable is "src_table1:target_table1,src_table2:target_table2". For YAML please continue using map syntax
+  restore_table_mapping: {}
+
+  retries_on_failure: 3          # RETRIES_ON_FAILURE, how many times to retry after a failure during upload or download
+  retries_pause: 5s              # RETRIES_PAUSE, duration time to pause after each download or upload failure
+  retries_jitter: 30             # RETRIES_JITTER, percent of RETRIES_PAUSE for jitter to avoid same time retries from parallel operations 
+
+  watch_interval: 1h       # WATCH_INTERVAL, use only for `watch` command, backup will create every 1h
+  full_interval: 24h       # FULL_INTERVAL, use only for `watch` command, full backup will create every 24h
+  watch_backup_name_template: "shard{shard}-{type}-{time:20060102150405}" # WATCH_BACKUP_NAME_TEMPLATE, used only for `watch` command, macros values will apply from `system.macros` for time:XXX, look format in https://go.dev/src/time/format.go
+
+  sharded_operation_mode: none       # SHARDED_OPERATION_MODE, how different replicas will shard backing up data for tables. Options are: none (no sharding), table (table granularity), database (database granularity), first-replica (on the lexicographically sorted first active replica). If left empty, then the "none" option will be set as default.
+
+  cpu_nice_priority: 15    # CPU niceness priority, to allow throttling CPU intensive operation, more details https://manpages.ubuntu.com/manpages/xenial/man1/nice.1.html
+  io_nice_priority: "idle" # IO niceness priority, to allow throttling DISK intensive operation, more details https://manpages.ubuntu.com/manpages/xenial/man1/ionice.1.html
+
+  rbac_backup_always: true # always backup RBAC objects
+  rbac_resolve_conflicts: "recreate"  # action, when RBAC object with the same name already exists, allow "recreate", "ignore", "fail" values
+
+  config_backup_always: false # always backup CONFIGS, disabled by default cause configuration shall be manage via Infrastructure as Code approach
+  named_collections_backup_always: false # always backup Named Collections, disabled by default cause configuration shall be manage via Infrastructure as Code approach 
+
+clickhouse:
+  username: default                # CLICKHOUSE_USERNAME
+  password: ""                     # CLICKHOUSE_PASSWORD
+  host: localhost                  # CLICKHOUSE_HOST, To make backup data `clickhouse-backup` requires access to the same file system as clickhouse-server, so `host` should localhost or address of another docker container on the same machine, or IP address bound to some network interface on the same host.
+  port: 9000                       # CLICKHOUSE_PORT, don't use 8123, clickhouse-backup doesn't support HTTP protocol
+  # CLICKHOUSE_DISK_MAPPING, use this mapping when your `system.disks` are different between the source and destination clusters during backup and restore process.
+  # The format for this env variable is "disk_name1:disk_path1,disk_name2:disk_path2". For YAML please continue using map syntax.
+  # If destination disk is different from source backup disk then you need to specify the destination disk in the config file:
+
+  # disk_mapping:
+  #  disk_destination: /var/lib/clickhouse/disks/destination
+
+  # `disk_destination`  needs to be referenced in backup (source config), and all names from this map (`disk:path`) shall exist in `system.disks` on destination server.
+  # During download of the backup from remote location (s3), if `name` is not present in `disk_mapping` (on the destination server config too) then `default` disk path will used for download.
+  # `disk_mapping` is used to understand during download where downloaded parts shall be unpacked (which disk) on destination server and where to search for data parts directories during restore.
+  disk_mapping: {}
+  # CLICKHOUSE_SKIP_TABLES, the list of tables (pattern are allowed) which are ignored during backup and restore process
+  # The format for this env variable is "pattern1,pattern2,pattern3". For YAML please continue using list syntax
+  skip_tables:
+    - system.*
+    - INFORMATION_SCHEMA.*
+    - information_schema.*
+  # CLICKHOUSE_SKIP_TABLE_ENGINES, the list of tables engines which are ignored during backup, upload, download, restore process
+  # The format for this env variable is "Engine1,Engine2,engine3". For YAML please continue using array syntax
+  skip_table_engines: []
+  # CLICKHOUSE_SKIP_DISKS, list of disk names which are ignored during create, upload, download and restore command
+  # The format for this env variable is "Disk1,disk2,disk3". For YAML please continue using array syntax
+  skip_disks: []
+  # CLICKHOUSE_SKIP_DISK_TYPES, list of disk types which are ignored during create, upload, download and restore command
+  # The format for this env variable is "Engine1,Engine2,engine3". For YAML please continue using array syntax
+  skip_disk_types: []
+  timeout: 5m                  # CLICKHOUSE_TIMEOUT
+  freeze_by_part: false        # CLICKHOUSE_FREEZE_BY_PART, allow freezing by part instead of freezing the whole table
+  freeze_by_part_where: ""     # CLICKHOUSE_FREEZE_BY_PART_WHERE, allow parts filtering during freezing when freeze_by_part: true
+  secure: false                # CLICKHOUSE_SECURE, use TLS encryption for connection
+  skip_verify: false           # CLICKHOUSE_SKIP_VERIFY, skip certificate verification and allow potential certificate warnings
+  sync_replicated_tables: true # CLICKHOUSE_SYNC_REPLICATED_TABLES
+  tls_key: ""                  # CLICKHOUSE_TLS_KEY, filename with TLS key file
+  tls_cert: ""                 # CLICKHOUSE_TLS_CERT, filename with TLS certificate file
+  tls_ca: ""                   # CLICKHOUSE_TLS_CA, filename with TLS custom authority file
+  log_sql_queries: true        # CLICKHOUSE_LOG_SQL_QUERIES, logging `clickhouse-backup` SQL queries on `info` level, when true, `debug` level when false
+  debug: false                 # CLICKHOUSE_DEBUG
+  config_dir:      "/etc/clickhouse-server"              # CLICKHOUSE_CONFIG_DIR
+  # CLICKHOUSE_RESTART_COMMAND, use this command when restoring with --rbac, --rbac-only or --configs, --configs-only options
+  # will split command by ; and execute one by one, all errors will logged and ignore
+  # available prefixes
+  # - sql: will execute SQL query
+  # - exec: will execute command via shell
+  restart_command: "exec:systemctl restart clickhouse-server" 
+  ignore_not_exists_error_during_freeze: true # CLICKHOUSE_IGNORE_NOT_EXISTS_ERROR_DURING_FREEZE, helps to avoid backup failures when running frequent CREATE / DROP tables and databases during backup, `clickhouse-backup` will ignore `code: 60` and `code: 81` errors during execution of `ALTER TABLE ... FREEZE`
+  check_replicas_before_attach: true # CLICKHOUSE_CHECK_REPLICAS_BEFORE_ATTACH, helps avoiding concurrent ATTACH PART execution when restoring ReplicatedMergeTree tables
+  default_replica_path: "/clickhouse/tables/{cluster}/{shard}/{database}/{table}" # CLICKHOUSE_DEFAULT_REPLICA_PATH, will use during restore Replicated tables without macros in replication_path if replica already exists, to avoid restoring conflicts
+  default_replica_name: "{replica}" # CLICKHOUSE_DEFAULT_REPLICA_NAME, will use during restore Replicated tables without macros in replica_name if replica already exists, to avoid restoring conflicts
+  use_embedded_backup_restore: false # CLICKHOUSE_USE_EMBEDDED_BACKUP_RESTORE, use BACKUP / RESTORE SQL statements instead of regular SQL queries to use features of modern ClickHouse server versions
+  use_embedded_backup_restore_cluster: "" # CLICKHOUSE_USE_EMBEDDED_BACKUP_RESTORE_CLUSTER, add ON CLUSTER clause to BACKUP / RESTORE SQL statements when `use_embedded_backup_restore: true`, value is cluster name from system.clusters, e.g. "{cluster}"
+  embedded_backup_disk: ""  # CLICKHOUSE_EMBEDDED_BACKUP_DISK - disk from system.disks which will use when `use_embedded_backup_restore: true`
+  backup_mutations: true # CLICKHOUSE_BACKUP_MUTATIONS, allow backup mutations from system.mutations WHERE is_done=0 and apply it during restore
+  restore_as_attach: false # CLICKHOUSE_RESTORE_AS_ATTACH, allow restore tables which have inconsistent data parts structure and mutations in progress
+  restore_distributed_cluster: "" # CLICKHOUSE_RESTORE_DISTRIBUTED_CLUSTER, cluster name (can use macros) which will use during restore `engine=Distributed` tables, when cluster defined in backup table definition not exists in `system.clusters`
+  check_parts_columns: true # CLICKHOUSE_CHECK_PARTS_COLUMNS, check data types from system.parts_columns during create backup to guarantee mutation is complete
+  max_connections: 0 # CLICKHOUSE_MAX_CONNECTIONS, how many parallel connections could be opened during operations
+azblob:
+  endpoint_suffix: "core.windows.net" # AZBLOB_ENDPOINT_SUFFIX
+  account_name: ""               # AZBLOB_ACCOUNT_NAME
+  account_key: ""                # AZBLOB_ACCOUNT_KEY
+  sas: ""                        # AZBLOB_SAS
+  use_managed_identity: false    # AZBLOB_USE_MANAGED_IDENTITY
+  container: ""                  # AZBLOB_CONTAINER
+  assume_container_exists: false # AZBLOB_ASSUME_CONTAINER_EXISTS, enables assignment of rights granting clickhouse-backup access only to blobs in the container
+  path: ""                       # AZBLOB_PATH, `system.macros` values can be applied as {macro_name}
+  object_disk_path: ""           # AZBLOB_OBJECT_DISK_PATH, path for backup of part from clickhouse object disks, if object disks present in clickhouse, then shall not be zero and shall not be prefixed by `path`
+  compression_level: 1           # AZBLOB_COMPRESSION_LEVEL
+  compression_format: tar        # AZBLOB_COMPRESSION_FORMAT, allowed values tar, lz4, bzip2, gzip, sz, xz, brortli, zstd, `none` for upload data part folders as is
+  sse_key: ""                    # AZBLOB_SSE_KEY
+  max_parts_count: 256           # AZBLOB_MAX_PARTS_COUNT, number of parts for AZBLOB uploads, for properly calculate buffer size
+  max_buffers: 3                 # AZBLOB_MAX_BUFFERS, similar with S3_CONCURRENCY
+  debug: false                   # AZBLOB_DEBUG
+s3:
+  access_key: ""                   # S3_ACCESS_KEY
+  secret_key: ""                   # S3_SECRET_KEY
+  bucket: ""                       # S3_BUCKET
+  endpoint: ""                     # S3_ENDPOINT
+  region: us-east-1                # S3_REGION
+  # AWS changed S3 defaults in April 2023 so that all new buckets have ACL disabled: https://aws.amazon.com/blogs/aws/heads-up-amazon-s3-security-changes-are-coming-in-april-of-2023/
+  # They also recommend that ACLs are disabled: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ensure-object-ownership.html
+  # use `acl: ""` if you see "api error AccessControlListNotSupported: The bucket does not allow ACLs"
+  acl: private                     # S3_ACL 
+  assume_role_arn: ""              # S3_ASSUME_ROLE_ARN
+  force_path_style: false          # S3_FORCE_PATH_STYLE, set to `true` for S3-compatible storage (MinIO, Ceph, etc.) or when using custom endpoints that require path-style URLs (https://endpoint/bucket/key) instead of virtual-hosted style (https://bucket.endpoint/key)
+  path: ""                         # S3_PATH, `system.macros` values can be applied as {macro_name}
+  object_disk_path: ""             # S3_OBJECT_DISK_PATH, path for backup of part from clickhouse object disks, if object disks present in clickhouse, then shall not be zero and shall not be prefixed by `path`
+  disable_ssl: false               # S3_DISABLE_SSL
+  compression_level: 1             # S3_COMPRESSION_LEVEL
+  compression_format: tar          # S3_COMPRESSION_FORMAT, allowed values tar, lz4, bzip2, gzip, sz, xz, brortli, zstd, `none` for upload data part folders as is
+  # look at details in https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html
+  sse: ""                          # S3_SSE, empty (default), AES256, or aws:kms
+  sse_customer_algorithm: ""       # S3_SSE_CUSTOMER_ALGORITHM, encryption algorithm, for example, AES256
+  sse_customer_key: ""             # S3_SSE_CUSTOMER_KEY, customer-provided encryption key use `openssl rand 32 > aws_sse.key` and `cat aws_sse.key | base64` 
+  sse_customer_key_md5: ""         # S3_SSE_CUSTOMER_KEY_MD5, 128-bit MD5 digest of the encryption key according to RFC 1321 use `cat aws_sse.key |  openssl dgst -md5 -binary | base64`
+  sse_kms_key_id: ""               # S3_SSE_KMS_KEY_ID, if S3_SSE is aws:kms then specifies the ID of the Amazon Web Services Key Management Service
+  sse_kms_encryption_context: ""   # S3_SSE_KMS_ENCRYPTION_CONTEXT, base64-encoded UTF-8 string holding a JSON with the encryption context
+                                   # Specifies the Amazon Web Services KMS Encryption Context to use for object encryption.
+                                   # This is a collection of non-secret key-value pairs that represent additional authenticated data.
+                                   # When you use an encryption context to encrypt data, you must specify the same (an exact case-sensitive match)
+                                   # encryption context to decrypt the data. An encryption context is supported only on operations with symmetric encryption KMS keys
+  disable_cert_verification: false # S3_DISABLE_CERT_VERIFICATION
+  use_custom_storage_class: false  # S3_USE_CUSTOM_STORAGE_CLASS
+  storage_class: STANDARD          # S3_STORAGE_CLASS, by default allow only from list https://github.com/aws/aws-sdk-go-v2/blob/main/service/s3/types/enums.go#L787-L799
+  concurrency: 1                   # S3_CONCURRENCY
+  chunk_size: 0                    # S3_CHUNK_SIZE, default 0: remoteSize / max_part_count
+  max_parts_count: 4000            # S3_MAX_PARTS_COUNT, number of parts for S3 multipart uploads and downloads
+  allow_multipart_download: false  # S3_ALLOW_MULTIPART_DOWNLOAD, allow faster multipart download speed, but will require additional disk space, download_concurrency * part size in worst case
+  checksum_algorithm: ""           # S3_CHECKSUM_ALGORITHM, use it when you use object lock which allow to avoid delete keys from bucket until some timeout after creation, use CRC32 as fastest
+  request_content_md5: false       # S3_REQUEST_CONTENT_MD5, set to true for S3-compatible storage that requires Content-MD5 header for DeleteObjects API (e.g., some MinIO configurations), see https://github.com/aws/aws-sdk-go-v2/discussions/2960
+
+  # S3_OBJECT_LABELS, allow setup metadata for each object during upload, use {macro_name} from system.macros and {backupName} for current backup name
+  # The format for this env variable is "key1:value1,key2:value2". For YAML please continue using map syntax
+  object_labels: {}
+  # S3_CUSTOM_STORAGE_CLASS_MAP, allow setup storage class depending on the backup name regexp pattern, format nameRegexp > className
+  custom_storage_class_map: {}
+  # S3_REQUEST_PAYER, define who will pay to request, look https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html for details, possible values requester, if empty then bucket owner
+  request_payer: ""
+  debug: false                     # S3_DEBUG
+gcs:
+  credentials_file: ""         # GCS_CREDENTIALS_FILE
+  credentials_json: ""         # GCS_CREDENTIALS_JSON
+  credentials_json_encoded: "" # GCS_CREDENTIALS_JSON_ENCODED, base64 encoded json with credentials
+  sa_email: ""                 # GCS_SA_EMAIL, service account email for authorization without credentials
+  # look https://cloud.google.com/storage/docs/authentication/managing-hmackeys#create how to get HMAC keys for access to bucket
+  embedded_access_key: ""      # GCS_EMBEDDED_ACCESS_KEY, use it when `use_embedded_backup_restore: true`, `embedded_backup_disk: ""`, `remote_storage: gcs`
+  embedded_secret_key: ""      # GCS_EMBEDDED_SECRET_KEY, use it when `use_embedded_backup_restore: true`, `embedded_backup_disk: ""`, `remote_storage: gcs`
+  skip_credentials: false      # GCS_SKIP_CREDENTIALS, skip add credentials to requests to allow anonymous access to bucket
+  endpoint: ""                 # GCS_ENDPOINT, use it for custom GCS endpoint/compatible storage. For example, when using custom endpoint via private service connect
+  bucket: ""                   # GCS_BUCKET
+  path: ""                     # GCS_PATH, `system.macros` values can be applied as {macro_name}
+  object_disk_path: ""         # GCS_OBJECT_DISK_PATH, path for backup of part from clickhouse object disks, if object disks present in clickhouse, then shall not be zero and shall not be prefixed by `path`
+  compression_level: 1         # GCS_COMPRESSION_LEVEL
+  compression_format: tar      # GCS_COMPRESSION_FORMAT, allowed values tar, lz4, bzip2, gzip, sz, xz, brortli, zstd, `none` for upload data part folders as is
+  storage_class: STANDARD      # GCS_STORAGE_CLASS
+  chunk_size: 0                # GCS_CHUNK_SIZE, default 16 * 1024 * 1024 (16MB)
+  client_pool_size: 500        # GCS_CLIENT_POOL_SIZE, default max(upload_concurrency, download concurrency) * 3, should be at least 3 times bigger than `UPLOAD_CONCURRENCY` or `DOWNLOAD_CONCURRENCY` in each upload and download case to avoid stuck
+  # GCS_OBJECT_LABELS, allow setup metadata for each object during upload, use {macro_name} from system.macros and {backupName} for current backup name
+  # The format for this env variable is "key1:value1,key2:value2". For YAML please continue using map syntax
+  object_labels: {}
+  # GCS_CUSTOM_STORAGE_CLASS_MAP, allow setup storage class depends on backup name regexp pattern, format nameRegexp > className
+  custom_storage_class_map: {}
+  debug: false                 # GCS_DEBUG
+  force_http: false            # GCS_FORCE_HTTP
+  # GCS_ENCRYPTION_KEY, base64-encoded 256-bit key for customer-supplied encryption (CSEK)
+  # This encrypts backup data at rest using a key you control. Generate with: `openssl rand -base64 32`
+  # See https://cloud.google.com/storage/docs/encryption/customer-supplied-keys
+  encryption_key: ""
+cos:
+  url: ""                      # COS_URL
+  timeout: 2m                  # COS_TIMEOUT
+  secret_id: ""                # COS_SECRET_ID
+  secret_key: ""               # COS_SECRET_KEY
+  path: ""                     # COS_PATH, `system.macros` values can be applied as {macro_name}
+  object_disk_path: ""         # GOS_OBJECT_DISK_PATH, path for backup of part from clickhouse object disks, if object disks present in clickhouse, then shall not be zero and shall not be prefixed by `path`
+  compression_format: tar      # COS_COMPRESSION_FORMAT, allowed values tar, lz4, bzip2, gzip, sz, xz, brortli, zstd, `none` for upload data part folders as is
+  compression_level: 1         # COS_COMPRESSION_LEVEL
+  max_parts_count: 1000        # COS_MAX_PARTS_COUNT, number of parts for COS multipart uploads and downloads
+  concurrency: 1               # COS_CONCURRENCY, concurrency for multipart upload and download
+  allow_multipart_download: false  # COS_ALLOW_MULTIPART_DOWNLOAD, allow faster multipart download speed, but will require additional disk space, download_concurrency * part size in worst case
+ftp:
+  address: ""                  # FTP_ADDRESS in format `host:port`
+  timeout: 2m                  # FTP_TIMEOUT
+  username: ""                 # FTP_USERNAME
+  password: ""                 # FTP_PASSWORD
+  tls: false                   # FTP_TLS
+  tls_skip_verify: false       # FTP_TLS_SKIP_VERIFY
+  path: ""                     # FTP_PATH, `system.macros` values can be applied as {macro_name}
+  object_disk_path: ""         # FTP_OBJECT_DISK_PATH, path for backup of part from clickhouse object disks, if object disks present in clickhouse, then shall not be zero and shall not be prefixed by `path`
+  compression_format: tar      # FTP_COMPRESSION_FORMAT, allowed values tar, lz4, bzip2, gzip, sz, xz, brortli, zstd, `none` for upload data part folders as is
+  compression_level: 1         # FTP_COMPRESSION_LEVEL
+  debug: false                 # FTP_DEBUG
+sftp:
+  address: ""                  # SFTP_ADDRESS
+  username: ""                 # SFTP_USERNAME
+  password: ""                 # SFTP_PASSWORD
+  port: 22                     # SFTP_PORT
+  key: ""                      # SFTP_KEY
+  path: ""                     # SFTP_PATH, `system.macros` values can be applied as {macro_name}
+  object_disk_path: ""         # SFTP_OBJECT_DISK_PATH, path for backup of part from clickhouse object disks, if object disks present in clickhouse, then shall not be zero and shall not be prefixed by `path`
+  concurrency: 1               # SFTP_CONCURRENCY
+  compression_format: tar      # SFTP_COMPRESSION_FORMAT, allowed values tar, lz4, bzip2, gzip, sz, xz, brortli, zstd, `none` for upload data part folders as is
+  compression_level: 1         # SFTP_COMPRESSION_LEVEL
+  debug: false                 # SFTP_DEBUG
+custom:
+  upload_command: ""           # CUSTOM_UPLOAD_COMMAND
+  download_command: ""         # CUSTOM_DOWNLOAD_COMMAND
+  delete_command: ""           # CUSTOM_DELETE_COMMAND
+  list_command: ""             # CUSTOM_LIST_COMMAND
+  command_timeout: "4h"        # CUSTOM_COMMAND_TIMEOUT
+api:
+  listen: "localhost:7171"     # API_LISTEN
+  enable_metrics: true         # API_ENABLE_METRICS
+  enable_pprof: false          # API_ENABLE_PPROF
+  username: ""                 # API_USERNAME, basic authorization for API endpoint
+  password: ""                 # API_PASSWORD
+  secure: false                # API_SECURE, use TLS for listen API socket
+  ca_cert_file: ""             # API_CA_CERT_FILE
+                               # openssl genrsa -out /etc/clickhouse-backup/ca-key.pem 4096
+                               # openssl req -subj "/O=altinity" -x509 -new -nodes -key /etc/clickhouse-backup/ca-key.pem -sha256 -days 365 -out /etc/clickhouse-backup/ca-cert.pem
+  private_key_file: ""         # API_PRIVATE_KEY_FILE, openssl genrsa -out /etc/clickhouse-backup/server-key.pem 4096
+  certificate_file: ""         # API_CERTIFICATE_FILE,
+                               # openssl req -subj "/CN=localhost" -addext "subjectAltName = DNS:localhost,DNS:*.cluster.local" -new -key /etc/clickhouse-backup/server-key.pem -out /etc/clickhouse-backup/server-req.csr
+                               # openssl x509 -req -days 365000 -extensions SAN -extfile <(printf "\n[SAN]\nsubjectAltName=DNS:localhost,DNS:*.cluster.local") -in /etc/clickhouse-backup/server-req.csr -out /etc/clickhouse-backup/server-cert.pem -CA /etc/clickhouse-backup/ca-cert.pem -CAkey /etc/clickhouse-backup/ca-key.pem -CAcreateserial
+  integration_tables_host: ""  # API_INTEGRATION_TABLES_HOST, allow using DNS name to connect in `system.backup_list` and `system.backup_actions`
+  allow_parallel: false        # API_ALLOW_PARALLEL, enable parallel operations, this allows for significant memory allocation and spawns go-routines, don't enable it if you are not sure
+  create_integration_tables: false # API_CREATE_INTEGRATION_TABLES, create `system.backup_list` and `system.backup_actions`
+  complete_resumable_after_restart: true # API_COMPLETE_RESUMABLE_AFTER_RESTART, after API server startup, if `/var/lib/clickhouse/backup/*/(upload|download).state2` present, then operation will continue in the background
+  watch_is_main_process: false # WATCH_IS_MAIN_PROCESS, treats 'watch' command as a main api process, if it is stopped unexpectedly, api server is also stopped. Does not stop api server if 'watch' command canceled by the user. 
