@@ -107,6 +107,19 @@ ClickHouse Auth Secret name
 {{- end }}
 
 {{/*
+Get the backup auth secret name.
+If backup.auth is enabled, use its specific secret. 
+Otherwise, fall back to the main clickhouse auth secret.
+*/}}
+{{- define "clickhouse.backup.secretName" -}}
+{{- if .Values.clickhouse.backup.auth.enabled -}}
+    {{- default (printf "%s-backup-auth" (include "clickhouse.fullname" .)) .Values.clickhouse.backup.auth.secretName -}}
+{{- else -}}
+    {{- include "clickhouse.authSecretName" . -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 ClickHouse Interserver Credentials Secret name
 */}}
 {{- define "clickhouse.interserverSecretName" -}}

@@ -511,22 +511,25 @@ clickhouse:
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| clickhouse.backup.auth.password | string | `""` | password with which the backup cronjob authenticates to clickhouse |
-| clickhouse.backup.auth.username | string | `default` | username with which the backup cronjob authenticates to clickhouse |
-| clickhouse.backup.config.content | string | `""` | if not using an existing secret, this is used as the content of `/etc/clickhouse-backup/config.yml` |
-| clickhouse.backup.config.existingSecret | string | `""` | if set, use this k8s secret as the source for the config.yml file used by the backup daemon |
-| clickhouse.backup.config.secretKey | string | `"config.yml"` | if using existingSecret, this is the key name inside the secret to mount as the config file |
+| clickhouse.backup.auth.existingSecret | string | `""` | name of a pre-existing k8s secret containing clickhouse credentials; takes precedence over `auth.username` and `auth.password` |
+| clickhouse.backup.auth.password | string | `""` | password with which the backup sidecar and cronjob authenticate to clickhouse |
+| clickhouse.backup.auth.username | string | `""` | username with which the backup sidecar and cronjob authenticate to clickhouse |
+| clickhouse.backup.config.content | string | `""` | inline content for the clickhouse-backup `config.yml` used by the backup sidecar; if empty the chart's default `sources/config.yml` is used |
+| clickhouse.backup.config.existingConfigMap | string | `""` | name of a pre-existing configmap containing the clickhouse-backup config file; takes precedence over `config.content` |
+| clickhouse.backup.config.fileName | string | `"config.yml"` | key name of the config file inside `config.existingConfigMap` |
 | clickhouse.backup.create_incremental_backups | bool | `true` | Back up only parts changed/created since the last full backup |
 | clickhouse.backup.cronjob.image.pullPolicy | string | `"IfNotPresent"` | PullPolicy for the backup initiator cronjob container image |
 | clickhouse.backup.cronjob.image.repository | string | `clickhouse/clickhouse-server` | Docker image to run in the backup initiator cronjob |
 | clickhouse.backup.cronjob.image.tag | string | `""` | Docker tag to run in the backup initiator cronjob (if left unset, defaults to chart appVersion) |
+| clickhouse.backup.cronjob.script.content | string | `""` | inline initiator script content; if empty the chart's default [backup.sh](sources/backup.sh) is used |
+| clickhouse.backup.cronjob.script.existingConfigMap | string | `""` | name of a pre-existing configmap containing the initiator script; takes precedence over `cronjob.script.content` |
+| clickhouse.backup.cronjob.script.fileName | string | `"backup.sh"` | key name of the script file inside `cronjob.script.existingConfigMap` |
 | clickhouse.backup.delete_local_backups | bool | `false` | Manually delete local backups after the upload step: this may be redundant depending on how you configured `general.backups_to_keep_local` in the clickhouse-backup config.yml |
 | clickhouse.backup.enabled | bool | `false` | Enable backups using clickhouse-backup |
+| clickhouse.backup.env | list | `[]` | Custom environment variables for clickhouse-backup containers |
 | clickhouse.backup.full_backup_weekday | int | `1` | Which day of the week (1-7) to perform a full backup if incremental backup are activated |
 | clickhouse.backup.image.pullPolicy | string | `"IfNotPresent"` | PullPolicy for the backup sidecar container image |
 | clickhouse.backup.image.repository | string | `altinity/clickhouse-backup` | Docker image to run in the backup sidecar container |
 | clickhouse.backup.image.tag | string | `"stable"` | Docker tag to run in the backup sidecar container |
 | clickhouse.backup.schedule | string | `"0 7 * * *"` | cron schedule specification |
-| clickhouse.backup.script.command | string | `"bash /clickhouse-backup-scripts/backup.sh"` | command executed by the initiator cronjob (note that this is passed to `sh -c` in the cronjob pod spec) |
-| clickhouse.backup.script.configMapKey | string | `"backup.sh"` | if using a pre-existing configmap for the script run by the initiator cronjob, this specifies the key in the map |
-| clickhouse.backup.script.existingConfigMap | string | `""` | name of an existing configmap from which to mount the backup.sh script run by the initator cronjob; if left empty, the [default script](sources/backup.sh) is used |
+| clickhouse.backup.securityContext | object | `{"capabilities":{"add":["SYS_NICE"]},"fsGroup":101,"runAsGroup":101,"runAsUser":101}` | Security context for the clickhouse-backup sidecar container |

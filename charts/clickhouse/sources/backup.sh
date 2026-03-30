@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-CLICKHOUSE_CLIENT_CMD=("clickhouse-client" "-mn" "--user=${BACKUP_USER}" "--port=${CLICKHOUSE_PORT}")
-if [[ "${BACKUP_PASSWORD}" ]]; then
-  CLICKHOUSE_CLIENT_CMD+=("--password=${BACKUP_PASSWORD}")
+CLICKHOUSE_CLIENT_CMD=("clickhouse-client" "-mn" "--user=${CLICKHOUSE_USERNAME}" "--port=${CLICKHOUSE_PORT}")
+if [[ "${CLICKHOUSE_PASSWORD}" ]]; then
+  CLICKHOUSE_CLIENT_CMD+=("--password=${CLICKHOUSE_PASSWORD}")
 fi
 
 function query() {

@@ -41,8 +41,25 @@ clickhouse:
       tag: "stable"
       pullPolicy: IfNotPresent
     auth:
-      username: default
+      # -- Enable dedicated authentication for backups. 
+      # If false, the backup system will fall back to using the primary clickhouse.auth credentials.
+      enabled: false
+      # -- Create a secret for backup credentials (if false, secretName must reference an existing secret)
+      createSecret: true
+      # -- Name of the secret to create or use (auto-generated if empty).
+      # Existing secret must have keys: 'username' and 'password'.
+      secretName: ""
+      # -- Username (used when createSecret is true)
+      username: "backup_user"
+      # -- Password (used when createSecret is true)
       password: ""
+    securityContext:
+      runAsUser: 101
+      runAsGroup: 101
+      fsGroup: 101
+      capabilities:
+        add:
+          - SYS_NICE
     cronjob:
       schedule: "0 7 * * *"
       image:
@@ -53,6 +70,16 @@ clickhouse:
         # Default if left unset is chart appVersion
         tag: ""
         pullPolicy: IfNotPresent
+      script:
+        # -- Use an existing configmap containing the script to be run by the initiator cronjob. Takes precedence over "content"
+        # @section -- Backup Configuration
+        existingConfigMap: ""
+        # -- If using an existing configmap, the key name of the file containing the initiator script
+        fileName: "backup.sh"
+        # -- Inline initiator script
+        content: "" # |
+        # #!/bin/sh
+        # echo "write your own initiator script here"
       # -- additional labels to add to the cronjob pods
       labels: {}
       # -- additional annotations to add to the cronjob pods
@@ -60,62 +87,17 @@ clickhouse:
     create_incremental_backups: true
     full_backup_weekday: 1
     delete_local_backups: false
+    env: []
     config:
-      # -- Use an existing Secret containing the backup config file
-      # Takes precedence over `content`
+      # -- Use an existing configmap containing the base configuration file used by the clickhouse-backup server pod
+      #    Takes precedence over "content"
       # @section -- Backup Configuration
-      existingSecret: ""
-
-      # -- Key in the Secret that contains the user config (YAML or XML).
-      # Determines the filename under `/etc/clickhouse-backup/`.
-      # @section -- Backup Configuration
-      secretKey: "config.yml"
-
-      # -- Inline backup configuration (YAML)
-      # @section -- Backup Configuration
-      content: |
-         # see https://github.com/Altinity/clickhouse-backup for details; you will
-         # need to configure a storage backend minimally; you can't cut/paste this
-         # and expect it to work
-         general:
-           remote_storage: s3
-           disable_progress_bar: true
-           allow_empty_backups: true
-           use_resumable_state: true
-           allow_object_disk_streaming: true
-           backups_to_keep_local: -1
-           backups_to_keep_remote: 7
-         clickhouse:
-           log_sql_queries: false
-           check_parts_columns: false
-           username: default
-           password: ""
-           host: localhost
-           port: 9000
-           restart_command: sql:SYSTEM RELOAD USERS; sql:SYSTEM RELOAD CONFIG
-           disk_mapping:
-             default: /var/lib/clickhouse
-           skip_tables:
-           - system.*
-           - INFORMATION_SCHEMA.*
-           - information_schema.*
-           - _temporary_and_external_tables.*
-           timeout: 30m
-           check_replicas_before_attach: true
-           restore_distributed_cluster: '{cluster}'
-         api:
-           listen: 0.0.0.0:7171
-           enable_metrics: true
-           enable_pprof: true
-           create_integration_tables: true
-    script:
-      # -- Use an existing configmap containing the backup script executed by the cronjob
-      # takes precedence over the default backup.sh
       existingConfigMap: ""
-      # -- If using an existing configmap, the key name for the file containing the backup script
-      configMapKey: "backup.sh"
-      # -- Pod command run by the initiator cronojob (note that this is passed as a single string to "sh -c")
-      command: "bash /clickhouse-backup-scripts/backup.sh"
+      # -- If using an existing configmap, the key name for the file containing clickhouse-backup config yaml
+      # @section -- Backup Configuration
+      fileName: "config.yml"
+      # -- Inline content for the clickhouse-backup config.yml
+      content: ""
 
   # -- Resource allocation for ClickHouse pods
   # @ignored
