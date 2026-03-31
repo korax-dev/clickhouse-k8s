@@ -2,7 +2,7 @@
 
 A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
 
-![Version: 0.4.7](https://img.shields.io/badge/Version-0.4.7-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 26.2.5-alpine](https://img.shields.io/badge/AppVersion-26.2.5--alpine-informational?style=flat-square)
+![Version: 0.4.8](https://img.shields.io/badge/Version-0.4.8-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 26.3.2-alpine](https://img.shields.io/badge/AppVersion-26.3.2--alpine-informational?style=flat-square)
 
 ## Features
 
