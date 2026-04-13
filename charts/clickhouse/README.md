@@ -334,6 +334,10 @@ clickhouse:
     cronjob:
       schedule: "0 9 * * *"
     env:
+      - name: CLICKHOUSE_USE_EMBEDDED_BACKUP_RESTORE
+        value: "true"
+      - name: CLICKHOUSE_USE_EMBEDDED_BACKUP_RESTORE_CLUSTER
+        value: "true"
       - name: GCS_CREDENTIALS_JSON_ENCODED
         valueFrom:
           secretKeyRef:
@@ -364,6 +368,12 @@ clickhouse:
         compression_level: 1
         compression_format: gzip
 ```
+
+Note: Clickhouse versions 22.6 and later have embedded `BACKUP` and `RESTORE` commands, and you can
+configure clickhouse-backup to use those in preference to some of its internal tooling; see the
+[clickhouse-backup documentation](https://github.com/Altinity/clickhouse-backup) and the [Clickhouse
+Documentation](https://clickhouse.com/docs/operations/backup/overview) for details, as the correct
+configuration will vary depending on your preferences and local requirements.
 
 ## Values
 
