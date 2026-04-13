@@ -187,12 +187,6 @@ spec:
           image: {{ .image.repository | default "altinity/clickhouse-backup" }}:{{ .image.tag | default "latest" }}
           imagePullPolicy: {{ .image.pullPolicy | default "IfNotPresent" }}
           args:
-            - -c
-            {{- if .config.existingConfigMap }}
-            - '/etc/clickhouse-backup/{{ .config.fileName | default "config.yml" }}'
-            {{- else }}
-            - "/etc/clickhouse-backup/config.yml"
-            {{- end }}
             - server
           env:
             # pinning host and port in case cluster vars are doing anything weird
@@ -200,6 +194,24 @@ spec:
               value: 127.0.0.1
             - name: CLICKHOUSE_PORT
               value: "{{ $.Values.ports.clickhouse.tcp }}"
+            - name: API_LISTEN
+              value: 0.0.0.0:7171
+            - name: API_CREATE_INTEGRATION_TABLES
+              value: "true"
+            - name: ALLOW_EMPTY_BACKUPS
+              value: "true"
+            {{- if $.Values.clickhouse.backup.api.auth.enabled }}
+            - name: API_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.backup.apiSecretName" $ }}
+                  key: username
+            - name: API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.backup.apiSecretName" $ }}
+                  key: password
+            {{- end }}
             {{- if or $.Values.clickhouse.backup.auth.enabled $.Values.clickhouse.auth.enabled }}
             - name: CLICKHOUSE_USERNAME
               valueFrom:
@@ -225,9 +237,9 @@ spec:
               name: backup
               protocol: TCP
           resources: {}
-          {{- if .securityContext }}
+          {{- with $.Values.clickhouse.securityContext }}
           securityContext:
-            {{- toYaml .securityContext | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
           {{- end }}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
@@ -281,11 +293,7 @@ spec:
         {{- if .enabled }}
         - name: backup-config
           configMap:
-            {{- if .config.existingConfigMap }}
-            name: {{ .config.existingConfigMap }}
-            {{- else }}
             name: {{ include "clickhouse.fullname" $ }}-backup-config
-            {{- end }}
         {{- end }}
         {{- end }}
   {{- if $.Values.clickhouse.persistentVolume.enabled }}

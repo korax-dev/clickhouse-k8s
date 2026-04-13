@@ -41,7 +41,9 @@ clickhouse:
       tag: "stable"
       pullPolicy: IfNotPresent
     auth:
-      # -- Enable dedicated authentication for backups. 
+      # -- Enable dedicated authentication for backups. (This configures authentication between
+      # the backup process and the clickhouse process; for auth to the backup process API interface,
+      # see .clickhouse.backup.api.auth, below.)
       # If false, the backup system will fall back to using the primary clickhouse.auth credentials.
       enabled: false
       # -- Create a secret for backup credentials (if false, secretName must reference an existing secret)
@@ -53,13 +55,21 @@ clickhouse:
       username: "backup_user"
       # -- Password (used when createSecret is true)
       password: ""
-    securityContext:
-      runAsUser: 101
-      runAsGroup: 101
-      fsGroup: 101
-      capabilities:
-        add:
-          - SYS_NICE
+    api:
+      auth:
+        # -- Enable username/password auth to the backup process REST interface: this is used by
+        # the backup cronjob when sending commands.
+        # If false, any http client with network access can trigger backups/restores.
+        enabled: false
+        # -- Create a secret for api credentials (if false, secretName must reference an existing secret)
+        createSecret: true
+        # -- Name of the secret to create or use (auto-generated if empty).
+        # Existing secret must have keys: 'username' and 'password'.
+        secretName: ""
+        # -- Username (used when createSecret is true)
+        username: "backup_user"
+        # -- Password (used when createSecret is true)
+        password: ""
     cronjob:
       schedule: "0 7 * * *"
       image:
@@ -70,16 +80,13 @@ clickhouse:
         # Default if left unset is chart appVersion
         tag: ""
         pullPolicy: IfNotPresent
+      env: []
       script:
         # -- Use an existing configmap containing the script to be run by the initiator cronjob. Takes precedence over "content"
         # @section -- Backup Configuration
         existingConfigMap: ""
         # -- If using an existing configmap, the key name of the file containing the initiator script
         fileName: "backup.sh"
-        # -- Inline initiator script
-        content: "" # |
-        # #!/bin/sh
-        # echo "write your own initiator script here"
       # -- additional labels to add to the cronjob pods
       labels: {}
       # -- additional annotations to add to the cronjob pods
@@ -87,17 +94,28 @@ clickhouse:
     create_incremental_backups: true
     full_backup_weekday: 1
     delete_local_backups: false
+    # -- Custom environment variables for the clickhouse-backup sidecar
+    # @section -- Backup Configuration
     env: []
-    config:
-      # -- Use an existing configmap containing the base configuration file used by the clickhouse-backup server pod
-      #    Takes precedence over "content"
-      # @section -- Backup Configuration
-      existingConfigMap: ""
-      # -- If using an existing configmap, the key name for the file containing clickhouse-backup config yaml
-      # @section -- Backup Configuration
-      fileName: "config.yml"
-      # -- Inline content for the clickhouse-backup config.yml
-      content: ""
+      # - name: S3_ACCESS_KEY
+      #   valueFrom:
+      #     secretKeyRef:
+      #       name: my-s3-credentials
+      #       key: access-key
+    # -- Inline content for the clickhouse-backup config.yml
+    # Settings can be applied as env vars OR in the config block below.
+    # WARNING: Passwords and access keys should be set as env vars from secrets.
+    # Ref: https://github.com/Altinity/clickhouse-backup#configurable-parameters
+    # @section -- Backup Configuration
+    config: |
+      # general:
+      #   remote_storage: s3
+      #   backups_to_keep_remote: 7
+      # s3:
+      #   bucket: "my-backup-bucket"
+      #   path: "cluster-backups"
+      #   region: "us-east-1"
+      #   compression_format: tar
 
   # -- Resource allocation for ClickHouse pods
   # @ignored

@@ -120,6 +120,17 @@ Otherwise, fall back to the main clickhouse auth secret.
 {{- end -}}
 
 {{/*
+Get the backup api auth secret name.
+If backup.api.auth is enabled, use its specific secret. 
+Otherwise, fall back to the main clickhouse auth secret.
+*/}}
+{{- define "clickhouse.backup.apiSecretName" -}}
+{{- if .Values.clickhouse.backup.api.auth.enabled -}}
+    {{- default (printf "%s-backup-api-auth" (include "clickhouse.fullname" .)) .Values.clickhouse.backup.api.auth.secretName -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 ClickHouse Interserver Credentials Secret name
 */}}
 {{- define "clickhouse.interserverSecretName" -}}

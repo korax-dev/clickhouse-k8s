@@ -68,9 +68,9 @@ spec:
                 - name: FULL_BACKUP_WEEKDAY
                   value: {{ .full_backup_weekday | default 1 | quote }}
                 - name: DELETE_LOCAL_BACKUPS
-                  value: {{ $.delete_local_backups | default false | quote}}
-                {{- if .env }}
-                {{- toYaml .env | nindent 16 }}
+                  value: {{ .delete_local_backups | default false | quote}}
+                {{- if .cronjob.env }}
+                {{- toYaml .cronjob.env | nindent 16 }}
                 {{- end }}
               command:
                 - /clickhouse-backup-script/{{ .cronjob.script.filename | default "backup.sh" }}

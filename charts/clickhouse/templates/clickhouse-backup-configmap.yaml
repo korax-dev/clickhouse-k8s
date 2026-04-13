@@ -3,7 +3,7 @@
 {{- with $.Values.clickhouse.backup }}
 {{- if .enabled }}
 
-{{- if not .config.existingConfigMap }}
+{{- if .config }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -14,11 +14,7 @@ metadata:
     app.kubernetes.io/component: clickhouse-backup
 data:
   config.yml: |
-{{- if .config.content }}
-    {{- .config.content | nindent 4 }}
-{{- else }}
-    {{- $.Files.Get "sources/config.yml" | nindent 4 }}
-{{- end }}
+    {{- .config | nindent 4 }}
 {{- end }}
 
 {{- if not .cronjob.script.existingConfigMap }}
