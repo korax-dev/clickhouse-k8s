@@ -97,6 +97,10 @@ clickhouse:
     # -- Custom environment variables for the clickhouse-backup sidecar
     # @section -- Backup Configuration
     env: []
+      # - name: CLICKHOUSE_USE_EMBEDDED_BACKUP_RESTORE
+      #   value: "true"
+      # - name: CLICKHOUSE_USE_EMBEDDED_BACKUP_RESTORE_CLUSTER
+      #   value: "true"
       # - name: S3_ACCESS_KEY
       #   valueFrom:
       #     secretKeyRef:
