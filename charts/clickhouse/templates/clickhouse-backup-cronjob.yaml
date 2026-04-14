@@ -1,0 +1,90 @@
+{{- $services := list }}
+{{- $fullname := include "clickhouse.fullname" $ }}
+{{- range $shard := until (int .Values.clickhouse.shards) }}
+  {{- $shardName := printf "%s-shard%d-0.%s-headless" $fullname $shard $fullname }}
+  {{- $services = append $services $shardName }}
+{{- end }}
+{{- $serviceList := join "," $services }}
+{{- $clickhousePort := .Values.ports.clickhouse.tcp }}
+{{- $secretName := include "clickhouse.backup.secretName" $ }}
+
+{{- with $.Values.clickhouse.backup }}
+{{- if .enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $fullname }}-backup-cron
+spec:
+  # every day at 00:00
+  schedule: {{ .cronjob.schedule | quote }}
+  concurrencyPolicy: "Forbid"
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: clickhouse-backup
+            app: "{{ $fullname }}-backup-cron"
+          {{- if .cronjob.labels }}
+            {{ .cronjob.labels | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if .cronjob.annotations }}
+          annotations:
+            {{ .cronjob.annotations | toYaml | nindent 12 }}
+          {{- end }}
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: run-backup-cron
+              image: "{{ .cronjob.image.repository | default $.Values.clickhouse.image.repository }}:{{ .cronjob.image.tag | default $.Chart.AppVersion }}"
+              imagePullPolicy: {{ .cronjob.image.pullPolicy | default "IfNotPresent" }}
+              env:
+                - name: CLICKHOUSE_SERVICES
+                  value: {{ $serviceList }}
+                - name: CLICKHOUSE_PORT
+                  value: {{ $clickhousePort | quote }}
+                {{- if or .auth.enabled $.Values.clickhouse.auth.enabled }}
+                - name: CLICKHOUSE_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ $secretName }}
+                      key: username
+                - name: CLICKHOUSE_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ $secretName }}
+                      key: password
+                {{- else }}
+                - name: CLICKHOUSE_USER
+                  value: "default"
+                - name: CLICKHOUSE_PASSWORD
+                  value: ""
+                {{- end }}
+                - name: INCREMENTAL_BACKUP
+                  value: {{ .create_incremental_backups | quote}}
+                - name: FULL_BACKUP_WEEKDAY
+                  value: {{ .full_backup_weekday | default 1 | quote }}
+                - name: DELETE_LOCAL_BACKUPS
+                  value: {{ .delete_local_backups | default false | quote}}
+                {{- if .cronjob.env }}
+                {{- toYaml .cronjob.env | nindent 16 }}
+                {{- end }}
+              command:
+                - /clickhouse-backup-script/{{ .cronjob.script.filename | default "backup.sh" }}
+              volumeMounts:
+                - mountPath: /clickhouse-backup-script
+                  name: backup-script
+          volumes:
+            - name: backup-script
+              configMap:
+                defaultMode: 0755
+                {{- if .cronjob.script.existingConfigMap }}
+                name: {{ .cronjob.script.existingConfigMap }}
+                {{- else }}
+                name: {{ include "clickhouse.fullname" $ }}-backup-initiator
+                {{- end }}
+{{- end }}
+{{- end }}

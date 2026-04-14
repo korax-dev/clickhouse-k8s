@@ -1,0 +1,13 @@
+{{- if and .Values.clickhouse.backup.enabled .Values.clickhouse.backup.auth.enabled .Values.clickhouse.backup.auth.createSecret (not .Values.clickhouse.backup.auth.secretName) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "clickhouse.fullname" . }}-backup-auth
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse-backup
+type: Opaque
+data:
+  username: {{ .Values.clickhouse.backup.auth.username | b64enc | quote }}
+  password: {{ .Values.clickhouse.backup.auth.password | b64enc | quote }}
+{{- end }}
