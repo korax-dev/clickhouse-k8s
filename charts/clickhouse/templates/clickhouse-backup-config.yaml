@@ -1,0 +1,16 @@
+{{- $fullname := include "clickhouse.fullname" $ }}
+{{- $labels := include "clickhouse.labels" $ }}
+{{- with $.Values.clickhouse.backup }}
+{{- if and .enabled .config }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-backup-config
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: clickhouse-backup
+data:
+  config.yml: |
+    {{- .config | nindent 4 }}
+{{- end }}
+{{- end }}

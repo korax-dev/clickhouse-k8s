@@ -30,97 +30,6 @@ clickhouse:
     # @ignored
     pullPolicy: IfNotPresent
 
-  # -- Backup configuration
-  # @section Backup Configuration
-  backup:
-    enabled: false
-    image:
-      # -- docker image for the sidecar initContainer in the clickhouse server pods.
-      #    Any replacement for this should inherit from https://github.com/Altinity/clickhouse-backup/blob/master/Dockerfile
-      repository: altinity/clickhouse-backup
-      tag: "stable"
-      pullPolicy: IfNotPresent
-    auth:
-      # -- Enable dedicated authentication for backups. (This configures authentication between
-      # the backup process and the clickhouse process; for auth to the backup process API interface,
-      # see .clickhouse.backup.api.auth, below.)
-      # If false, the backup system will fall back to using the primary clickhouse.auth credentials.
-      enabled: false
-      # -- Create a secret for backup credentials (if false, secretName must reference an existing secret)
-      createSecret: true
-      # -- Name of the secret to create or use (auto-generated if empty).
-      # Existing secret must have keys: 'username' and 'password'.
-      secretName: ""
-      # -- Username (used when createSecret is true)
-      username: "backup_user"
-      # -- Password (used when createSecret is true)
-      password: ""
-    api:
-      auth:
-        # -- Enable username/password auth to the backup process REST interface: this is used by
-        # the backup cronjob when sending commands.
-        # If false, any http client with network access can trigger backups/restores.
-        enabled: false
-        # -- Create a secret for api credentials (if false, secretName must reference an existing secret)
-        createSecret: true
-        # -- Name of the secret to create or use (auto-generated if empty).
-        # Existing secret must have keys: 'username' and 'password'.
-        secretName: ""
-        # -- Username (used when createSecret is true)
-        username: "backup_user"
-        # -- Password (used when createSecret is true)
-        password: ""
-    cronjob:
-      schedule: "0 7 * * *"
-      image:
-        # -- docker image for the initiator cronjob.
-        #    Any replacement for this should have a functional clickhouse-client in its default PATH.
-        # Default if left unset is == .clickhouse.image
-        repository: ""
-        # Default if left unset is chart appVersion
-        tag: ""
-        pullPolicy: IfNotPresent
-      env: []
-      script:
-        # -- Use an existing configmap containing the script to be run by the initiator cronjob. Takes precedence over "content"
-        # @section -- Backup Configuration
-        existingConfigMap: ""
-        # -- If using an existing configmap, the key name of the file containing the initiator script
-        fileName: "backup.sh"
-      # -- additional labels to add to the cronjob pods
-      labels: {}
-      # -- additional annotations to add to the cronjob pods
-      annotations: {}
-    create_incremental_backups: true
-    full_backup_weekday: 1
-    delete_local_backups: false
-    # -- Custom environment variables for the clickhouse-backup sidecar
-    # @section -- Backup Configuration
-    env: []
-      # - name: CLICKHOUSE_USE_EMBEDDED_BACKUP_RESTORE
-      #   value: "true"
-      # - name: CLICKHOUSE_USE_EMBEDDED_BACKUP_RESTORE_CLUSTER
-      #   value: "true"
-      # - name: S3_ACCESS_KEY
-      #   valueFrom:
-      #     secretKeyRef:
-      #       name: my-s3-credentials
-      #       key: access-key
-    # -- Inline content for the clickhouse-backup config.yml
-    # Settings can be applied as env vars OR in the config block below.
-    # WARNING: Passwords and access keys should be set as env vars from secrets.
-    # Ref: https://github.com/Altinity/clickhouse-backup#configurable-parameters
-    # @section -- Backup Configuration
-    config: |
-      # general:
-      #   remote_storage: s3
-      #   backups_to_keep_remote: 7
-      # s3:
-      #   bucket: "my-backup-bucket"
-      #   path: "cluster-backups"
-      #   region: "us-east-1"
-      #   compression_format: tar
-
   # -- Resource allocation for ClickHouse pods
   # @ignored
   resources: {}
@@ -180,16 +89,13 @@ clickhouse:
     # -- Enable per-cluster Distributed query secret
     # @section -- Authentication
     enabled: false
-
     # -- Create a secret (if false, secretName must reference an existing secret)
     # @section -- Authentication
     createSecret: true
-
     # -- Name of the secret to create or use (auto-generated if empty).
     # Existing secret must have key: 'secret'
     # @section -- Authentication
     secretName: ""
-
     # -- Distributed query secret value (used when createSecret is true)
     # @section -- Authentication
     secret: ""
@@ -248,9 +154,10 @@ clickhouse:
     s3Endpoint: ~
     # -- Custom storage configuration template.
     # Configures disks and storage policies for ClickHouse.
-    # @default -- See Values
+    # For embedded backups, add a dedicated backup disk with a separate S3 path.
+    # @default -- See values.yaml
     # @section -- Storage
-    configTemplate: |
+    configTemplate: |-
       disks:
         s3_disk:
           type: object_storage
@@ -264,6 +171,13 @@ clickhouse:
           disk: s3_disk
           path: /var/lib/clickhouse/disks/s3_cache/
           max_size: 10Gi
+        # # Backup disk for embedded backups
+        # s3_backups:
+        #   type: object_storage
+        #   object_storage_type: s3
+        #   metadata_type: local
+        #   endpoint: https://backup-bucket.s3.region.amazonaws.com/object_disk/{cluster}/{shard}
+        #   use_environment_credentials: true
       policies:
         s3:
           volumes:
@@ -432,6 +346,9 @@ clickhouse:
   # This will be merged with the default configuration.
   # @section -- ClickHouse Configuration
   customConfig: {}
+    # # For embedded backups: specify which disk native BACKUP/RESTORE can use
+    # backups:
+    #   allowed_disk: s3_backups
 
   # @ignored
   nodeSelector: {}
@@ -458,6 +375,161 @@ clickhouse:
     #       name: my-secret
     #       key: my-secret-key
 
+  # Backup configuration
+  backup:
+    # -- Enable backups using clickhouse-backup
+    # @section -- Backup Configuration
+    enabled: false
+    image:
+      # -- Backup sidecar image repository
+      # @section -- Backup Configuration
+      repository: altinity/clickhouse-backup
+      # -- Backup sidecar image tag
+      # @section -- Backup Configuration
+      tag: 2.6.43
+      # @ignored
+      pullPolicy: IfNotPresent
+
+    # -- Resource requests and limits for the clickhouse-backup sidecar container
+    # @ignored
+    resources: {}
+      # requests:
+      #   memory: "256Mi"
+      #   cpu: "100m"
+      # limits:
+      #   memory: "512Mi"
+      #   cpu: "500m"
+
+    auth:
+      # -- Enable dedicated authentication for backups (used by backup cronjob to connect to ClickHouse). If false, falls back to clickhouse.auth credentials.
+      # @section -- Backup Configuration
+      enabled: false
+      # -- Create a secret for backup credentials (if false, secretName must reference an existing secret)
+      # @section -- Backup Configuration
+      createSecret: true
+      # -- Name of the secret to create or use (auto-generated if empty). Existing secret must have keys: 'username' and 'password'.
+      # @section -- Backup Configuration
+      secretName: ""
+      # -- Username (used when createSecret is true)
+      # @section -- Backup Configuration
+      username: "backup_user"
+      # -- Password (used when createSecret is true)
+      # @section -- Backup Configuration
+      password: ""
+
+    api:
+      # Metrics configuration
+      metrics:
+        # -- Enable Prometheus metrics for clickhouse-backup
+        # @section -- Backup Configuration
+        enabled: false
+      auth:
+        # -- Enable authentication for the backup REST API
+        # @section -- Backup Configuration
+        enabled: false
+        # -- Create a secret for API credentials (if false, secretName must reference an existing secret)
+        # @section -- Backup Configuration
+        createSecret: true
+        # -- Name of the secret to create or use (auto-generated if empty). Existing secret must have keys: 'username' and 'password'.
+        # @section -- Backup Configuration
+        secretName: ""
+        # -- Username (used when createSecret is true)
+        # @section -- Backup Configuration
+        username: "backup_user"
+        # -- Password (used when createSecret is true)
+        # @section -- Backup Configuration
+        password: ""
+
+    # -- Inline content for the clickhouse-backup config.yml. Settings can also be applied as env vars.
+    # For embedded backups: add backup disk to storageConfiguration + allowed_disk to customConfig.
+    # Ref: https://github.com/Altinity/clickhouse-backup/blob/master/ReadMe.md#configurable-parameters
+    # @section -- Backup Configuration
+    config: |-
+      # general:
+      #   log_level: info                     # Logging level: debug, info, warn, error
+      #   remote_storage: s3                  # Storage backend: s3, gcs, azblob, etc.
+      #   backups_to_keep_local: -1           # Local retention: -1 (delete after upload), 0 (keep all), N (keep last N)
+      #   backups_to_keep_remote: 8           # Remote retention: 0 (keep all), N (keep last N)
+      #   upload_concurrency: 4               # Parallel upload workers
+      #   download_concurrency: 4             # Parallel download workers
+      #   restore_schema_on_cluster: "{cluster}"  # Restore replicated tables across cluster
+
+      # clickhouse:
+      #   use_embedded_backup_restore: true   # Use ClickHouse native BACKUP/RESTORE
+      #   use_embedded_backup_restore_cluster: "{cluster}"  # Cluster name for distributed backups
+      #   embedded_backup_disk: s3_backups    # Disk name from storageConfiguration (must match customConfig.backups.allowed_disk)
+      #   timeout: 4h                         # Max time for backup/restore operations
+      #   skip_tables:                        # Tables to exclude from backups
+      #     - system.*
+      #     - INFORMATION_SCHEMA.*
+      #     - information_schema.*
+      #     - _temporary_and_external_tables.*
+
+      # s3:
+      #   bucket: mybucket                    # S3 bucket name
+      #   region: myregion                    # AWS region
+      #   path: backup/{cluster}/{shard}      # clickhouse-backup metadata path
+      #   object_disk_path: object_disk/{cluster}/{shard}  # Must match storageConfiguration endpoint path for embedded backups
+      #   compression_format: tar             # Backup archive format
+
+    # -- Custom environment variables for the clickhouse-backup sidecar
+    # @section -- Backup Configuration
+    env: []
+      # - name: S3_ACCESS_KEY
+      #   valueFrom:
+      #     secretKeyRef:
+      #       name: my-s3-credentials
+      #       key: access-key
+
+    cronjob:
+      image:
+        # -- Backup initiator image repository (defaults to clickhouse.image.repository if empty)
+        # @section -- Backup Configuration
+        repository: ""
+        # -- Backup initiator image tag (defaults to chart appVersion if empty)
+        # @section -- Backup Configuration
+        tag: ""
+        # @ignored
+        pullPolicy: IfNotPresent
+
+      # -- Resource requests and limits for the backup cronjob container
+      # @ignored
+      resources: {}
+        # requests:
+        #   memory: "128Mi"
+        #   cpu: "100m"
+        # limits:
+        #   memory: "256Mi"
+        #   cpu: "200m"
+
+      # -- Cron schedule specification
+      # @section -- Backup Configuration
+      schedule: "0 7 * * *"
+      # -- Create incremental backups (only parts changed since last full backup)
+      # @section -- Backup Configuration
+      create_incremental_backups: true
+      # -- Day of week (1-7) to perform full backup when incremental backups are enabled
+      # @section -- Backup Configuration
+      full_backup_weekday: 1
+
+      script:
+        # -- Name of existing ConfigMap containing the initiator script (takes precedence over default)
+        # @section -- Backup Configuration
+        existingConfigMap: ""
+        # -- Key name of the script file in existingConfigMap
+        # @section -- Backup Configuration
+        fileName: "backup.sh"
+
+      # -- Custom environment variables for the backup cronjob
+      # @section -- Backup Configuration
+      env: []
+      # -- Additional labels to add to the cronjob pod
+      # @section -- Backup Configuration
+      labels: {}
+      # -- Additional annotations to add to the cronjob pod
+      # @section -- Backup Configuration
+      annotations: {}
+
 # ClickHouse Keeper Configuration
 keeper:
   # -- Enable ClickHouse Keeper for cluster coordination
@@ -479,6 +551,16 @@ keeper:
     tag: ""
     # @ignored
     pullPolicy: IfNotPresent
+
+  # -- Resource allocation for Keeper pods
+  # @ignored
+  resources: {}
+    # limits:
+    #   cpu: 500m
+    #   memory: 512Mi
+    # requests:
+    #   cpu: 250m
+    #   memory: 256Mi
 
   # Authentication for ClickHouse Keeper
   auth:
@@ -547,16 +629,6 @@ keeper:
     # -- Size of persistent volume for Keeper data
     # @section -- Storage
     size: 1Gi
-
-  # -- Resource allocation for Keeper pods
-  # @ignored
-  resources: {}
-    # limits:
-    #   cpu: 500m
-    #   memory: 512Mi
-    # requests:
-    #   cpu: 250m
-    #   memory: 256Mi
 
   # -- Logging level for Keeper.
   # Valid values: none, fatal, critical, error, warning, notice, information, debug, trace.
@@ -763,3 +835,8 @@ ports:
     # -- Prometheus metrics port
     # @section -- Network Configuration
     metrics: 9363
+  # Backup port configuration
+  backup:
+    # -- API port for clickhouse-backup REST interface
+    # @section -- Network Configuration
+    api: 7171

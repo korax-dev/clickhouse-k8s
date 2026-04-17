@@ -40,6 +40,9 @@ spec:
         {{- if and (not $.Values.clickhouse.initdb.existingSecret) $.Values.clickhouse.initdb.scripts }}
         checksum/initdb: {{ include (print $.Template.BasePath "/clickhouse-initdb-secret.yaml") $ | sha256sum }}
         {{- end }}
+        {{- if $.Values.clickhouse.backup.enabled }}
+        checksum/backup-config: {{ include (print $.Template.BasePath "/clickhouse-backup-config.yaml") $ | sha256sum }}
+        {{- end }}
         {{- with $.Values.clickhouse.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -195,9 +198,11 @@ spec:
             - name: CLICKHOUSE_PORT
               value: "{{ $.Values.ports.clickhouse.tcp }}"
             - name: API_LISTEN
-              value: 0.0.0.0:7171
+              value: 0.0.0.0:{{ $.Values.ports.backup.api }}
             - name: API_CREATE_INTEGRATION_TABLES
               value: "true"
+            - name: API_ENABLE_METRICS
+              value: {{ $.Values.clickhouse.backup.api.metrics.enabled | quote }}
             - name: ALLOW_EMPTY_BACKUPS
               value: "true"
             {{- if $.Values.clickhouse.backup.api.auth.enabled }}
@@ -233,16 +238,13 @@ spec:
             {{- toYaml .env | nindent 12 }}
             {{- end }}
           ports:
-            - containerPort: 7171
-              name: backup
+            - containerPort: {{ $.Values.ports.backup.api }}
+              name: http-backup-api
               protocol: TCP
-          resources: {}
-          {{- with $.Values.clickhouse.securityContext }}
-          securityContext:
+          {{- with $.Values.clickhouse.backup.resources }}
+          resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
           volumeMounts:
             - mountPath: /etc/clickhouse-backup
               name: backup-config
