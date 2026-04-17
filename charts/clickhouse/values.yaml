@@ -443,6 +443,7 @@ clickhouse:
     # -- Inline content for the clickhouse-backup config.yml. Settings can also be applied as env vars.
     # For embedded backups: add backup disk to storageConfiguration + allowed_disk to customConfig.
     # Ref: https://github.com/Altinity/clickhouse-backup/blob/master/ReadMe.md#configurable-parameters
+    # @default -- See values.yaml
     # @section -- Backup Configuration
     config: |-
       # general:
