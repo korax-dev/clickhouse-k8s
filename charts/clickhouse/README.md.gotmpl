@@ -12,6 +12,7 @@
 - **ClickHouse Keeper**: Built-in coordination service as a ZooKeeper replacement
 - **Customization**: Flexible configuration options and initialization scripts
 - **Metrics**: Optional Prometheus metrics integration
+- **Backups**: Configurable support for using the [clickhouse-backup](https://github.com/altinity/clickhouse-backup) tool
 
 ## Storage Configuration
 
@@ -60,7 +61,7 @@ Advanced storage options such as tiered storage or custom policies can be added 
 clickhouse:
   storageConfiguration:
     enabled: true
-    configTemplate: |
+    configTemplate: |-
       disks:
         s3_disk:
           type: object_storage
@@ -123,7 +124,7 @@ clickhouse:
 
     # Option 1: Inline configuration (YAML or XML)
     # Example (YAML):
-    content: |
+    content: |-
       users:
         analytics:
           password: "analystpass"
@@ -131,7 +132,7 @@ clickhouse:
           quota: default
 
     # Example (XML):
-    content: |
+    content: |-
       <clickhouse>
         <users>
           <analytics>
@@ -254,6 +255,93 @@ For more information about available ClickHouse Keeper settings, refer to the [C
 > yq -oy '.' clickhouse_config.xml
 > ```
 
+## Backup Configuration
+
+This chart supports automated backups using [clickhouse-backup](https://github.com/altinity/clickhouse-backup). When enabled, each pod runs a clickhouse-backup sidecar that monitors the `system.backup_actions` table. A CronJob periodically inserts backup commands into this table, triggering each shard/replica to create and upload its own backup.
+
+### Basic Configuration
+
+```yaml
+clickhouse:
+  backup:
+    enabled: true
+    cronjob:
+      schedule: "0 9 * * *"
+      create_incremental_backups: true
+      full_backup_weekday: 1
+```
+
+### Storage Backend Example
+
+Configure storage backends via inline configuration or environment variables:
+
+```yaml
+clickhouse:
+  backup:
+    enabled: true
+    auth:
+      enabled: true
+      username: "backup_user"
+      password: "secure-password"
+    env:
+      - name: GCS_CREDENTIALS_JSON_ENCODED
+        valueFrom:
+          secretKeyRef:
+            name: my-gcs-credentials
+            key: credentials-json
+    config: |-
+      general:
+        log_level: info                     # Logging level: debug, info, warn, error
+        remote_storage: gcs                  # Storage backend: s3, gcs, azblob, etc.
+        backups_to_keep_local: -1           # Local retention: -1 (delete after upload), 0 (keep all), N (keep last N)
+        backups_to_keep_remote: 8           # Remote retention: 0 (keep all), N (keep last N)
+        upload_concurrency: 4               # Parallel upload workers
+        download_concurrency: 4             # Parallel download workers
+        restore_schema_on_cluster: "{cluster}"  # Restore replicated tables across cluster
+
+      clickhouse:
+        use_embedded_backup_restore: true   # Use ClickHouse native BACKUP/RESTORE
+        use_embedded_backup_restore_cluster: "{cluster}"  # Cluster name for distributed backups
+        embedded_backup_disk: s3_backups    # Disk name from storageConfiguration (must match customConfig.backups.allowed_disk)
+        timeout: 4h                         # Max time for backup/restore operations
+        skip_tables:                        # Tables to exclude from backups
+          - system.*
+          - INFORMATION_SCHEMA.*
+          - information_schema.*
+          - _temporary_and_external_tables.*
+
+      gcs:
+        bucket: mybucket                    # S3 bucket name
+        path: backup/{cluster}/{shard}      # clickhouse-backup metadata path
+        object_disk_path: object_disk/{cluster}/{shard}  # Must match storageConfiguration endpoint path for embedded backups
+        compression_format: gzip            # Backup archive format
+```
+
+For S3 or other storage backends, see the [clickhouse-backup configuration documentation](https://github.com/Altinity/clickhouse-backup#configurable-parameters).
+
+> [!NOTE] ClickHouse 22.6+ includes native `BACKUP` and `RESTORE` commands. Set
+> `clickhouse.use_embedded_backup_restore: true` in the config to enable them.
+> See the [ClickHouse Backup
+> documentation](https://clickhouse.com/docs/operations/backup) for details.
+
+### API Access
+
+The clickhouse-backup REST API is exposed on each pod via the headless service. Enable metrics and authentication:
+
+```yaml
+clickhouse:
+  backup:
+    api:
+      metrics:
+        enabled: true
+      auth:
+        enabled: true
+        username: "api-user"
+        password: "api-password"
+```
+
+Access the API at `http://<pod-name>.<release>-headless:7171` for operations like listing backups, triggering restores, or scraping metrics at `/metrics`.
+
 ## Deployment Example
 
 ```yaml
@@ -302,7 +390,7 @@ keeper:
   # Persistent storage for Keeper
   persistentVolume:
     enabled: true
-    size: 5Gi
+    size: 1Gi
 ```
 
 {{ template "chart.valuesSection" . }}

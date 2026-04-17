@@ -167,14 +167,6 @@ for SERVER in "${CLICKHOUSE_SVC_LIST[@]}"; do
     log info "sleeping 5s before re-checking"
     sleep 5
   done
-
-  if [[ "${DELETE_LOCAL_BACKUPS}" == "true" ]]; then
-    log info "Deleting local backups"
-    q="INSERT INTO system.backup_actions(command) VALUES('delete local ${SERVER}-${BACKUP_NAMES[$SERVER]}')"
-    if ! output="$(query --host="${SERVER}" "${q}")"; then
-      log fatal "Could not delete local backup: ${output}"
-    fi
-  fi
 done
 
 log info "DONE: BACKUPS CREATED"

@@ -35,3 +35,8 @@ spec:
       port: {{ .Values.ports.clickhouse.postgresql }}
       targetPort: tcp-postgresql
     {{- end }}
+    {{- if .Values.clickhouse.backup.enabled }}
+    - name: http-backup-api
+      port: {{ .Values.ports.backup.api }}
+      targetPort: http-backup-api
+    {{- end }}
