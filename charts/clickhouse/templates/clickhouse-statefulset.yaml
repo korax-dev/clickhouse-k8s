@@ -219,7 +219,9 @@ spec:
         name: data
       spec:
         accessModes: [ "ReadWriteOnce" ]
+        {{- if $.Values.clickhouse.persistentVolume.storageClass }}
         storageClassName: {{ $.Values.clickhouse.persistentVolume.storageClass | quote }}
+        {{- end }}
         resources:
           requests:
             storage: {{ $.Values.clickhouse.persistentVolume.size | quote }}

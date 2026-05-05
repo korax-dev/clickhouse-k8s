@@ -122,7 +122,9 @@ spec:
         name: data
       spec:
         accessModes: [ "ReadWriteOnce" ]
+        {{- if $.Values.keeper.persistentVolume.storageClass }}
         storageClassName: {{ .Values.keeper.persistentVolume.storageClass | quote }}
+        {{- end }}
         resources:
           requests:
             storage: {{ .Values.keeper.persistentVolume.size | quote }}
