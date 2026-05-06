@@ -301,6 +301,9 @@ clickhouse:
     runAsUser: 101
     runAsGroup: 101
     fsGroup: 101
+    # capabilities:
+    #   add:
+    #     - SYS_NICE
 
   # Service account configuration
   serviceAccount:
@@ -447,31 +450,31 @@ clickhouse:
     # @section -- Backup Configuration
     config: |-
       # general:
-      #   log_level: info                     # Logging level: debug, info, warn, error
-      #   remote_storage: s3                  # Storage backend: s3, gcs, azblob, etc.
-      #   backups_to_keep_local: -1           # Local retention: -1 (delete after upload), 0 (keep all), N (keep last N)
-      #   backups_to_keep_remote: 8           # Remote retention: 0 (keep all), N (keep last N)
-      #   upload_concurrency: 4               # Parallel upload workers
-      #   download_concurrency: 4             # Parallel download workers
-      #   restore_schema_on_cluster: "{cluster}"  # Restore replicated tables across cluster
+      #   log_level: info
+      #   remote_storage: s3
+      #   backups_to_keep_local: -1
+      #   backups_to_keep_remote: 8
+      #   upload_concurrency: 4
+      #   download_concurrency: 4
+      #   restore_schema_on_cluster: "{cluster}"
 
       # clickhouse:
-      #   use_embedded_backup_restore: true   # Use ClickHouse native BACKUP/RESTORE
-      #   use_embedded_backup_restore_cluster: "{cluster}"  # Cluster name for distributed backups
-      #   embedded_backup_disk: s3_backups    # Disk name from storageConfiguration (must match customConfig.backups.allowed_disk)
-      #   timeout: 4h                         # Max time for backup/restore operations
-      #   skip_tables:                        # Tables to exclude from backups
+      #   use_embedded_backup_restore: true
+      #   use_embedded_backup_restore_cluster: "{cluster}"
+      #   embedded_backup_disk: s3_backups
+      #   timeout: 4h
+      #   skip_tables:
       #     - system.*
       #     - INFORMATION_SCHEMA.*
       #     - information_schema.*
       #     - _temporary_and_external_tables.*
 
       # s3:
-      #   bucket: mybucket                    # S3 bucket name
-      #   region: myregion                    # AWS region
-      #   path: backup/{cluster}/{shard}      # clickhouse-backup metadata path
-      #   object_disk_path: object_disk/{cluster}/{shard}  # Must match storageConfiguration endpoint path for embedded backups
-      #   compression_format: tar             # Backup archive format
+      #   bucket: mybucket
+      #   region: myregion
+      #   path: backup/{cluster}/{shard}
+      #   object_disk_path: object_disk/{cluster}/{shard}
+      #   compression_format: tar
 
     # -- Custom environment variables for the clickhouse-backup sidecar
     # @section -- Backup Configuration

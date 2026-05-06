@@ -292,7 +292,7 @@ clickhouse:
     config: |-
       general:
         log_level: info                     # Logging level: debug, info, warn, error
-        remote_storage: gcs                  # Storage backend: s3, gcs, azblob, etc.
+        remote_storage: gcs                 # Storage backend: s3, gcs, azblob, etc.
         backups_to_keep_local: -1           # Local retention: -1 (delete after upload), 0 (keep all), N (keep last N)
         backups_to_keep_remote: 8           # Remote retention: 0 (keep all), N (keep last N)
         upload_concurrency: 4               # Parallel upload workers
@@ -319,7 +319,8 @@ clickhouse:
 
 For S3 or other storage backends, see the [clickhouse-backup configuration documentation](https://github.com/Altinity/clickhouse-backup#configurable-parameters).
 
-> [!NOTE] ClickHouse 22.6+ includes native `BACKUP` and `RESTORE` commands. Set
+> [!NOTE]
+> ClickHouse 22.6+ includes native `BACKUP` and `RESTORE` commands. Set
 > `clickhouse.use_embedded_backup_restore: true` in the config to enable them.
 > See the [ClickHouse Backup
 > documentation](https://clickhouse.com/docs/operations/backup) for details.
