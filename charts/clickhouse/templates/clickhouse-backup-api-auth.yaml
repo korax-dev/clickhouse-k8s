@@ -1,0 +1,19 @@
+{{- if and .Values.clickhouse.backup.api.auth.enabled .Values.clickhouse.backup.api.auth.createSecret }}
+{{- $username := .Values.clickhouse.backup.api.auth.username }}
+{{- $password := .Values.clickhouse.backup.api.auth.password }}
+{{- if and $username $password }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "clickhouse.backup.apiSecretName" . }}
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+type: Opaque
+data:
+  username: {{ $username | b64enc }}
+  password: {{ $password | b64enc }}
+{{- else }}
+{{- fail "Username and password must be provided when ClickHouse backup api auth is enabled and createSecret is true" }}
+{{- end }}
+{{- end }}

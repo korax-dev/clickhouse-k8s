@@ -1,0 +1,20 @@
+{{- $fullname := include "clickhouse.fullname" $ }}
+{{- $labels := include "clickhouse.labels" $ }}
+{{- with $.Values.clickhouse.backup }}
+{{- if and .enabled (not .cronjob.script.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-backup-script
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: clickhouse-backup
+data:
+  backup.sh: |
+{{- if .cronjob.script.content }}
+  {{- .cronjob.script.content | nindent 4 }}
+{{- else }}
+  {{- $.Files.Get "sources/backup.sh" | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}
