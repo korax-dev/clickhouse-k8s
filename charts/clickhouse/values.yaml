@@ -389,7 +389,7 @@ clickhouse:
       repository: altinity/clickhouse-backup
       # -- Backup sidecar image tag
       # @section -- Backup Configuration
-      tag: 2.6.43
+      tag: 2.6.44
       # @ignored
       pullPolicy: IfNotPresent
 
