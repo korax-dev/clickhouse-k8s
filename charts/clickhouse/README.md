@@ -2,7 +2,7 @@
 
 A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
 
-![Version: 0.4.14](https://img.shields.io/badge/Version-0.4.14-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 26.5.1-alpine](https://img.shields.io/badge/AppVersion-26.5.1--alpine-informational?style=flat-square)
+![Version: 0.5.4](https://img.shields.io/badge/Version-0.5.4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 26.5.1-alpine](https://img.shields.io/badge/AppVersion-26.5.1--alpine-informational?style=flat-square)
 
 ## Features
 
@@ -435,6 +435,9 @@ keeper:
 | clickhouse.customConfig | object | `{}` | Custom ClickHouse configuration. This will be merged with the default configuration. |
 | clickhouse.database.name | string | `""` | Name of the default database to create during initialization |
 | clickhouse.env | list | `[]` | Custom environment variables for ClickHouse containers |
+| clickhouse.extraContainers | list | `[]` | Additional containers (e.g. sidecars) to add to ClickHouse pods. Rendered with `tpl`. |
+| clickhouse.extraVolumeMounts | list | `[]` | Additional volume mounts for the ClickHouse container. Rendered with `tpl`. |
+| clickhouse.extraVolumes | list | `[]` | Additional volumes to add to ClickHouse pods. Rendered with `tpl`. |
 | clickhouse.headlessService.annotations | object | `{}` | Annotations to add to the ClickHouse headless service |
 | clickhouse.image.repository | string | `"clickhouse/clickhouse-server"` | ClickHouse server image repository |
 | clickhouse.image.tag | string | `""` | ClickHouse server image tag (defaults to chart appVersion if empty) |
@@ -497,7 +500,7 @@ keeper:
 | clickhouse.backup.enabled | bool | `false` | Enable backups using clickhouse-backup |
 | clickhouse.backup.env | list | `[]` | Custom environment variables for the clickhouse-backup sidecar |
 | clickhouse.backup.image.repository | string | `"altinity/clickhouse-backup"` | Backup sidecar image repository |
-| clickhouse.backup.image.tag | string | `"2.6.43"` | Backup sidecar image tag |
+| clickhouse.backup.image.tag | string | `"2.7.2"` | Backup sidecar image tag |
 
 ### Storage
 
@@ -523,6 +526,9 @@ keeper:
 | keeper.customConfig | object | `{}` | Custom Keeper configuration. This will be merged with the default configuration. |
 | keeper.enabled | bool | `false` | Enable ClickHouse Keeper for cluster coordination |
 | keeper.env | list | `[]` | Custom environment variables for Keeper containers |
+| keeper.extraContainers | list | `[]` | Additional containers (e.g. sidecars) to add to Keeper pods. Rendered with `tpl`. |
+| keeper.extraVolumeMounts | list | `[]` | Additional volume mounts for the Keeper container. Rendered with `tpl`. |
+| keeper.extraVolumes | list | `[]` | Additional volumes to add to Keeper pods. Rendered with `tpl`. |
 | keeper.headlessService.annotations | object | `{}` | Annotations to add to the Keeper headless service |
 | keeper.image.repository | string | `"clickhouse/clickhouse-keeper"` | ClickHouse Keeper image repository |
 | keeper.image.tag | string | `""` | ClickHouse Keeper image tag (defaults to chart appVersion if empty) |

@@ -76,6 +76,9 @@ spec:
               mountPath: /etc/clickhouse-keeper/keeper_config.d
             - name: data
               mountPath: /var/lib/clickhouse
+            {{- with .Values.keeper.extraVolumeMounts }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.keeper.resources | nindent 12 }}
           {{- with .Values.keeper.lifecycle }}
@@ -94,6 +97,9 @@ spec:
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+        {{- with .Values.keeper.extraContainers }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
       volumes:
         - name: config
           configMap:
@@ -101,6 +107,9 @@ spec:
         {{- if not .Values.keeper.persistentVolume.enabled }}
         - name: data
           emptyDir: {}
+        {{- end }}
+        {{- with .Values.keeper.extraVolumes }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
       {{- with .Values.keeper.nodeSelector }}
       nodeSelector:

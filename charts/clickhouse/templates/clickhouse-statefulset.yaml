@@ -166,6 +166,9 @@ spec:
             - name: initdb
               mountPath: /docker-entrypoint-initdb.d
             {{- end }}
+            {{- with $.Values.clickhouse.extraVolumeMounts }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml $.Values.clickhouse.resources | nindent 12 }}
           {{- with $.Values.clickhouse.lifecycle }}
@@ -259,6 +262,9 @@ spec:
             {{- end }}
         {{- end }}
       {{- end }}
+      {{- with $.Values.clickhouse.extraContainers }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
       {{- with $.Values.clickhouse.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -297,6 +303,9 @@ spec:
           configMap:
             name: {{ include "clickhouse.fullname" $ }}-backup-config
         {{- end }}
+        {{- end }}
+        {{- with $.Values.clickhouse.extraVolumes }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
   {{- if $.Values.clickhouse.persistentVolume.enabled }}
   volumeClaimTemplates:
