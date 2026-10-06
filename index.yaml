@@ -2,6 +2,27 @@ apiVersion: v1
 entries:
   clickhouse:
   - apiVersion: v2
+    appVersion: 26.9.11-alpine
+    created: "2026-10-06T15:12:11.351268913Z"
+    description: A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
+    digest: 3c5d70b3f50108654075dfee3856c66ce583ee088b9ba2fece853edf15c20e74
+    home: https://clickhouse.com/
+    icon: https://brandfolder.com/clickhouse/media-kit/#!asset/tr4p5mpvnbf8fbbpmn9x
+    keywords:
+    - clickhouse
+    - database
+    - analytics
+    maintainers:
+    - name: calebhansard
+    name: clickhouse
+    sources:
+    - https://github.com/ClickHouse/ClickHouse
+    - https://github.com/korax-dev/clickhouse-k8s
+    type: application
+    urls:
+    - https://github.com/korax-dev/clickhouse-k8s/releases/download/clickhouse-0.5.6/clickhouse-0.5.6.tgz
+    version: 0.5.6
+  - apiVersion: v2
     appVersion: 26.9.8-alpine
     created: "2026-10-02T18:31:07.942709971Z"
     description: A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
@@ -757,4 +778,4 @@ entries:
     urls:
     - https://github.com/korax-dev/clickhouse-k8s/releases/download/clickhouse-0.2.1/clickhouse-0.2.1.tgz
     version: 0.2.1
-generated: "2026-10-02T18:31:07.94310091Z"
+generated: "2026-10-06T15:12:11.351629367Z"
