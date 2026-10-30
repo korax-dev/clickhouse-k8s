@@ -1,7 +1,7 @@
 {{- $services := list }}
 {{- $fullname := include "clickhouse.fullname" $ }}
 {{- range $shard := until (int .Values.clickhouse.shards) }}
-  {{- $shardName := printf "%s-shard%d-0.%s-headless" $fullname $shard $fullname }}
+  {{- $shardName := printf "%s-shard%d-0.%s" $fullname $shard (include "clickhouse.headlessDomain" $) }}
   {{- $services = append $services $shardName }}
 {{- end }}
 {{- $serviceList := join "," $services }}

@@ -128,7 +128,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: CLICKHOUSE_HOST_NAME
-              value: "$(POD_NAME).{{ include "clickhouse.fullname" $ }}-headless"
+              value: "$(POD_NAME).{{ include "clickhouse.headlessDomain" $ }}"
             {{- end }}
             {{- if $.Values.clickhouse.env }}
             {{- toYaml $.Values.clickhouse.env | nindent 12 }}

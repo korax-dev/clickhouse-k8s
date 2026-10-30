@@ -836,6 +836,15 @@ keeper:
   # @section -- Keeper Configuration
   extraVolumeMounts: []
 
+# -- Kubernetes cluster domain. When set (e.g. `cluster.local`), generated hostnames are
+# fully qualified (`<pod>.<release>-headless.<namespace>.svc.<clusterDomain>`), which
+# kubelet writes into each pod's /etc/hosts, so a pod resolves its own name without
+# relying on cluster DNS. ClickHouse decides once at startup which `remote_servers`
+# replica is itself, so a DNS miss there leaves a pod treating itself as remote.
+# Leave empty to keep short `<pod>.<release>-headless` names.
+# @section -- Network Configuration
+clusterDomain: ""
+
 # Network port configuration
 ports:
   # ClickHouse port configuration

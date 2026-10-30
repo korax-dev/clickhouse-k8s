@@ -25,7 +25,7 @@ Individual shards can be accessed directly:
 {{- range $shard := until (int .Values.clickhouse.shards) }}
   - Shard {{ $shard }}:
   {{- range $replica := until (int $.Values.clickhouse.replicasPerShard) }}
-    - {{ include "clickhouse.fullname" $ }}-shard{{ $shard }}-{{ $replica }}.{{ include "clickhouse.fullname" $ }}-headless
+    - {{ include "clickhouse.fullname" $ }}-shard{{ $shard }}-{{ $replica }}.{{ include "clickhouse.headlessDomain" $ }}
   {{- end }}
 {{- end }}
 
@@ -40,7 +40,7 @@ ClickHouse Keeper is deployed with {{ .Values.keeper.replicas }} node(s) and can
 
 Individual Keeper nodes:
 {{- range $i := until (int .Values.keeper.replicas) }}
-  - {{ include "clickhouse.fullname" $ }}-keeper-{{ $i }}.{{ include "clickhouse.fullname" $ }}-keeper-headless
+  - {{ include "clickhouse.fullname" $ }}-keeper-{{ $i }}.{{ include "clickhouse.keeperHeadlessDomain" $ }}
 {{- end }}
 {{- end }}
 

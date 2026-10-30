@@ -48,7 +48,7 @@ data:
           - internal_replication: {{ $.Values.clickhouse.internalReplication }}
             replica:
               {{- range $replica := until (int $.Values.clickhouse.replicasPerShard) }}
-              - host: {{ include "clickhouse.fullname" $ }}-shard{{ $shard }}-{{ $replica }}.{{ include "clickhouse.fullname" $ }}-headless
+              - host: {{ include "clickhouse.fullname" $ }}-shard{{ $shard }}-{{ $replica }}.{{ include "clickhouse.headlessDomain" $ }}
                 port: {{ $.Values.ports.clickhouse.tcp }}
               {{- end }}
           {{- end }}
@@ -69,7 +69,7 @@ data:
       {{- end }}
       node:
         {{- range $i := until (int .Values.keeper.replicas) }}
-        - host: {{ include "clickhouse.fullname" $ }}-keeper-{{ $i }}.{{ include "clickhouse.fullname" $ }}-keeper-headless
+        - host: {{ include "clickhouse.fullname" $ }}-keeper-{{ $i }}.{{ include "clickhouse.keeperHeadlessDomain" $ }}
           port: {{ $.Values.ports.keeper.client }}
         {{- end }}
     distributed_ddl:
