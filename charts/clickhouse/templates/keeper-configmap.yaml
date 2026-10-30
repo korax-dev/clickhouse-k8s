@@ -45,7 +45,7 @@ data:
         server:
           {{- range $i := until (int .Values.keeper.replicas) }}
           - id: {{ $i }}
-            hostname: {{ include "clickhouse.fullname" $ }}-keeper-{{ $i }}.{{ include "clickhouse.fullname" $ }}-keeper-headless
+            hostname: {{ include "clickhouse.fullname" $ }}-keeper-{{ $i }}.{{ include "clickhouse.keeperHeadlessDomain" $ }}
             port: {{ $.Values.ports.keeper.raft }}
           {{- end }}
   {{- if .Values.keeper.customConfig }}

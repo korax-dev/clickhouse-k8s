@@ -259,3 +259,29 @@ Validate that keeper is enabled if using multiple shards or replicas
 {{- end }}
 {{- end }}
 {{- end }}
+
+{{/*
+Domain of the ClickHouse headless service, appended to pod names to form hostnames.
+Fully qualified when clusterDomain is set, so each pod can resolve its own name from
+/etc/hosts instead of depending on cluster DNS.
+*/}}
+{{- define "clickhouse.headlessDomain" -}}
+{{- $svc := printf "%s-headless" (include "clickhouse.fullname" .) -}}
+{{- if .Values.clusterDomain -}}
+{{- printf "%s.%s.svc.%s" $svc .Release.Namespace .Values.clusterDomain -}}
+{{- else -}}
+{{- $svc -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Domain of the Keeper headless service; see clickhouse.headlessDomain.
+*/}}
+{{- define "clickhouse.keeperHeadlessDomain" -}}
+{{- $svc := printf "%s-keeper-headless" (include "clickhouse.fullname" .) -}}
+{{- if .Values.clusterDomain -}}
+{{- printf "%s.%s.svc.%s" $svc .Release.Namespace .Values.clusterDomain -}}
+{{- else -}}
+{{- $svc -}}
+{{- end -}}
+{{- end }}

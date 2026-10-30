@@ -46,7 +46,7 @@ spec:
             - "-c"
             - |
               # Wait for Keeper to be ready
-              until echo "ruok" | nc {{ include "clickhouse.fullname" . }}-keeper-0.{{ include "clickhouse.fullname" . }}-keeper-headless {{ .Values.ports.keeper.client }} | grep "imok"; do
+              until echo "ruok" | nc {{ include "clickhouse.fullname" . }}-keeper-0.{{ include "clickhouse.keeperHeadlessDomain" . }} {{ .Values.ports.keeper.client }} | grep "imok"; do
                 echo "Waiting for Keeper to be ready..."
                 sleep 5
               done
@@ -55,7 +55,7 @@ spec:
 
               # Check if auth is already configured - ZooKeeper container has zkCli.sh
               echo "Checking current ACLs..."
-              GETACL_RESULT=$(zkCli.sh -server {{ include "clickhouse.fullname" . }}-keeper-0.{{ include "clickhouse.fullname" . }}-keeper-headless:{{ .Values.ports.keeper.client }} getAcl / 2>&1 || echo "No ACLs")
+              GETACL_RESULT=$(zkCli.sh -server {{ include "clickhouse.fullname" . }}-keeper-0.{{ include "clickhouse.keeperHeadlessDomain" . }}:{{ .Values.ports.keeper.client }} getAcl / 2>&1 || echo "No ACLs")
               
               if echo "$GETACL_RESULT" | grep -q "Insufficient permission"; then
                 echo "Authentication is already configured. Changes to authentication must be done manually."
@@ -83,7 +83,7 @@ spec:
               
               # Set up auth using username and hashed password
               echo "Setting up authentication..."
-              AUTH_OUTPUT=$(zkCli.sh -server {{ include "clickhouse.fullname" . }}-keeper-0.{{ include "clickhouse.fullname" . }}-keeper-headless:{{ .Values.ports.keeper.client }} << EOF
+              AUTH_OUTPUT=$(zkCli.sh -server {{ include "clickhouse.fullname" . }}-keeper-0.{{ include "clickhouse.keeperHeadlessDomain" . }}:{{ .Values.ports.keeper.client }} << EOF
               addauth digest $CLICKHOUSE_KEEPER_AUTH
               setAcl / digest:${USERNAME}:${PASSWORD_HASH}:crwda
               EOF

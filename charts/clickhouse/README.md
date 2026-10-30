@@ -2,7 +2,7 @@
 
 A Helm chart for deploying ClickHouse with optional ClickHouse Keeper
 
-![Version: 0.5.6](https://img.shields.io/badge/Version-0.5.6-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 26.9.11-alpine](https://img.shields.io/badge/AppVersion-26.9.11--alpine-informational?style=flat-square)
+![Version: 0.5.7](https://img.shields.io/badge/Version-0.5.7-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 26.9.11-alpine](https://img.shields.io/badge/AppVersion-26.9.11--alpine-informational?style=flat-square)
 
 ## Features
 
@@ -500,7 +500,7 @@ keeper:
 | clickhouse.backup.enabled | bool | `false` | Enable backups using clickhouse-backup |
 | clickhouse.backup.env | list | `[]` | Custom environment variables for the clickhouse-backup sidecar |
 | clickhouse.backup.image.repository | string | `"altinity/clickhouse-backup"` | Backup sidecar image repository |
-| clickhouse.backup.image.tag | string | `"2.7.2"` | Backup sidecar image tag |
+| clickhouse.backup.image.tag | string | `"2.8.1"` | Backup sidecar image tag |
 
 ### Storage
 
@@ -516,6 +516,23 @@ keeper:
 | keeper.persistentVolume.enabled | bool | `true` | Enable persistent storage for Keeper |
 | keeper.persistentVolume.size | string | `"1Gi"` | Size of persistent volume for Keeper data |
 | keeper.persistentVolume.storageClass | string | `""` | Storage class to use (uses default if empty) |
+
+### Network Configuration
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| clusterDomain | string | `""` | Kubernetes cluster domain. When set (e.g. `cluster.local`), generated hostnames are fully qualified (`<pod>.<release>-headless.<namespace>.svc.<clusterDomain>`), which kubelet writes into each pod's /etc/hosts, so a pod resolves its own name without relying on cluster DNS. ClickHouse decides once at startup which `remote_servers` replica is itself, so a DNS miss there leaves a pod treating itself as remote. Leave empty to keep short `<pod>.<release>-headless` names. |
+| ports.backup.api | int | `7171` | API port for clickhouse-backup REST interface |
+| ports.clickhouse.http | int | `8123` | HTTP interface port for queries and REST API |
+| ports.clickhouse.interserver | int | `9009` | Inter-server communication port for replication |
+| ports.clickhouse.metrics | int | `9363` | Prometheus metrics port |
+| ports.clickhouse.mysql | string | `nil` | MySQL emulation port (null disables the service) Example: 9004 |
+| ports.clickhouse.postgresql | string | `nil` | PostgreSQL emulation port (null disables the service) Example: 9005 |
+| ports.clickhouse.tcp | int | `9000` | Native interface port for ClickHouse clients |
+| ports.keeper.client | int | `9181` | Client connection port |
+| ports.keeper.httpControl | int | `9182` | HTTP control interface port for health checks |
+| ports.keeper.metrics | int | `9363` | Prometheus metrics port |
+| ports.keeper.raft | int | `9234` | Raft protocol port for Keeper consensus |
 
 ### Keeper Configuration
 
@@ -556,19 +573,3 @@ keeper:
 | keeper.statefulSet.updateStrategy.type | string | `"RollingUpdate"` | Type of update strategy: RollingUpdate or OnDelete |
 | keeper.terminationGracePeriodSeconds | int | `30` | Seconds Kubernetes waits for the pod to terminate gracefully before sending SIGKILL. |
 | keeper.topologySpreadConstraints | list | `[]` | Topology spread constraints for Keeper pods |
-
-### Network Configuration
-
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| ports.backup.api | int | `7171` | API port for clickhouse-backup REST interface |
-| ports.clickhouse.http | int | `8123` | HTTP interface port for queries and REST API |
-| ports.clickhouse.interserver | int | `9009` | Inter-server communication port for replication |
-| ports.clickhouse.metrics | int | `9363` | Prometheus metrics port |
-| ports.clickhouse.mysql | string | `nil` | MySQL emulation port (null disables the service) Example: 9004 |
-| ports.clickhouse.postgresql | string | `nil` | PostgreSQL emulation port (null disables the service) Example: 9005 |
-| ports.clickhouse.tcp | int | `9000` | Native interface port for ClickHouse clients |
-| ports.keeper.client | int | `9181` | Client connection port |
-| ports.keeper.httpControl | int | `9182` | HTTP control interface port for health checks |
-| ports.keeper.metrics | int | `9363` | Prometheus metrics port |
-| ports.keeper.raft | int | `9234` | Raft protocol port for Keeper consensus |
